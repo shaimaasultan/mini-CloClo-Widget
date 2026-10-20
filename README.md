@@ -40,6 +40,13 @@ box. For Arabic replies, add the Arabic speech pack in **Settings → Time &
 language → Speech** (Microsoft Hoda), then turn on *Voice and speech → Voice
 commands and replies in Arabic*.
 
+**Optional — let Windows enforce "offline":** double-click
+`scripts\Block-MiniCloClo-Network.cmd` and approve the administrator prompt. It
+adds two Windows Firewall rules that block all of `MiniCloClo.exe`'s network
+traffic, in and out, whatever code inside it tries. Check them any time with
+`scripts\Set-MiniCloCloFirewall.ps1 -Check`; remove them with `-Remove` from an
+administrator PowerShell.
+
 ## Talking to it
 
 Hold the **right mouse button anywhere for a second** (or press

@@ -88,3 +88,4 @@ Start-Process -FilePath $exe -WorkingDirectory $target
 Write-Host ''
 Write-Host 'Done. Mini CloClo is in the bottom-right corner, just above the taskbar.'
 Write-Host 'Press Ctrl+Alt+H at any time to hear the help.'
+Write-Host 'To have Windows Firewall block all of its network traffic, double-click scripts\Block-MiniCloClo-Network.cmd.'
