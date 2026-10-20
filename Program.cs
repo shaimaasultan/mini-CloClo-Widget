@@ -19,6 +19,7 @@ public static class Program
 #if DEBUG
         if (args.Length == 2 && args[0] == "--snapshot") return Snapshot.Run(args[1]);
         if (args.Length == 2 && args[0] == "--prayer-test") return Snapshot.PrayerTest(args[1]);
+        if (args.Length == 2 && args[0] == "--load-trace") return Snapshot.LoadTrace(args[1]);
         if (args.Length == 2 && args[0] == "--voice-test")
         {
             // The model loads only under the single-instance lock.

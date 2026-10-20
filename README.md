@@ -144,10 +144,13 @@ Windows.
   startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check.
 
-Debug builds have three test switches: `MiniCloClo.exe --snapshot <folder>`
+Debug builds have four test switches: `MiniCloClo.exe --snapshot <folder>`
 draws every avatar look to PNG files, `--voice-test <file>` speaks test
 commands with a Windows voice and runs them through the recognizer, and
-`--prayer-test <file>` writes today's times for a few cities.
+`--prayer-test <file>` writes today's times for a few cities, and
+`--load-trace <file>` records which part of the app loads any networking
+library (it shows they come only from WPF's startup and Windows' speech
+voices, and that none of them connects anywhere).
 
 ## Credits
 

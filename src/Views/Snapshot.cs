@@ -51,6 +51,74 @@ internal static class Snapshot
         return 0;
     }
 
+    // "MiniCloClo.exe --load-trace <report file>": runs each part of the app
+    // in turn and records which step loads a networking library - the .NET
+    // ones with the call stack that loaded them.
+    public static int LoadTrace(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        static bool IsNet(string name) => name.Contains("System.Net", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("winhttp", StringComparison.OrdinalIgnoreCase) || name.StartsWith("msquic", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("wininet", StringComparison.OrdinalIgnoreCase) || name.StartsWith("ws2_32", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("webio", StringComparison.OrdinalIgnoreCase);
+        AppDomain.CurrentDomain.AssemblyLoad += (_, e) =>
+        {
+            var name = e.LoadedAssembly.GetName().Name ?? "";
+            if (!IsNet(name)) return;
+            lines.Add($"  .NET loaded {name}, from:");
+            foreach (var frame in new System.Diagnostics.StackTrace().ToString().Split('\n').Skip(1).Take(14))
+                lines.Add("      " + frame.Trim());
+        };
+        var known = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Step(string name, Action run)
+        {
+            lines.Add($"== {name}");
+            try { run(); } catch (Exception ex) { lines.Add($"  ({ex.GetType().Name}: {ex.Message})"); }
+            System.Threading.Thread.Sleep(300);
+            using var self = System.Diagnostics.Process.GetCurrentProcess();
+            foreach (System.Diagnostics.ProcessModule module in self.Modules)
+                if (known.Add(module.ModuleName) && IsNet(module.ModuleName)) lines.Add($"  native/module now loaded: {module.ModuleName}");
+        }
+        void Pump(int ms)
+        {
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+            timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+            timer.Start();
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+        }
+
+        Step("start (before WPF)", () => { });
+        System.Windows.Application? app = null;
+        Step("WPF application", () => app = new System.Windows.Application());
+        Step("a WPF window with the avatar", () =>
+        {
+            var window = new Window { Content = new KeeperView(), Width = 200, Height = 300, ShowInTaskbar = false, Left = -2000 };
+            window.Show();
+            Pump(500);
+            window.Close();
+        });
+        Step("WinRT speech: list the voices", () => _ = Windows.Media.SpeechSynthesis.SpeechSynthesizer.AllVoices.Count);
+        Step("speak a word", () =>
+        {
+            SpeechReader.Speak("Test.");
+            Pump(2500);
+        });
+        Step("play the azan for a second", () =>
+        {
+            using var player = new LocalAudioPlayer();
+            player.TryPlay(AzanLibrary.Default);
+            Pump(1000);
+            player.Stop();
+        });
+        Step("a file dialog (Choose azan audio)", () => _ = new Microsoft.Win32.OpenFileDialog());
+        Step("Whisper: load the model", () =>
+            LocalAudioTranscriber.TranscribeCommandForTestAsync(new float[16000], arabic: false).GetAwaiter().GetResult());
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        app?.Shutdown();
+        return 0;
+    }
+
     // "MiniCloClo.exe --prayer-test <report file>": today's times for a few
     // listed cities, plus the spoken date, to compare with a mosque timetable.
     public static int PrayerTest(string reportPath)

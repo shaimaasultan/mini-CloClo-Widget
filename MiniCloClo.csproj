@@ -86,6 +86,12 @@
            Text="Whisper CPU runtime differs from the pinned 1.9.1 package: %(_WhisperSourceHash.Identity)" />
   </Target>
 
+  <!-- msquic.dll is .NET's QUIC (HTTP/3) networking engine. Nothing in Mini
+       CloClo uses QUIC, so it isn't shipped. -->
+  <Target Name="DropUnusedNetworkingRuntime" AfterTargets="Publish">
+    <Delete Files="$(PublishDir)msquic.dll" />
+  </Target>
+
   <!-- Mini CloClo never goes online: the build fails if any source file
        creates an HTTP client, socket or web request. -->
   <Target Name="CheckNoNetwork" BeforeTargets="CoreCompile">
