@@ -64,6 +64,14 @@ public class WidgetSettings
     public string KeeperOutfit { get; set; } = "classic";
     public string LadyOutfit { get; set; } = "classic";
     public string MotionMode { get; set; } = "gentle";
+    // People to call by voice ("call Mom"): only these numbers are ever
+    // dialed. Kept on this PC only.
+    public List<ContactSettings> Contacts { get; set; } = new();
+    public const int MaxContacts = 50;
+    // The paired phone that places calls (BluetoothDialer): Windows' id for
+    // it and its name as shown in Settings. Null until chosen or found.
+    public string? PhoneDeviceId { get; set; }
+    public string? PhoneName { get; set; }
 
     public static double RoundCoordinate(double value) => Math.Round(value, 2);
 
@@ -141,6 +149,12 @@ public class WidgetSettings
         SleepAfterMinutes = AllowedSleepIntervals.Contains(SleepAfterMinutes) ? SleepAfterMinutes : 15;
         SpeechRate = SpeechRateChoices.Contains(SpeechRate) ? SpeechRate : 1.0;
         PrayerPreAlertMinutes = PreAlertChoices.Contains(PrayerPreAlertMinutes) ? PrayerPreAlertMinutes : 10;
+        Contacts = (Contacts ?? new List<ContactSettings>())
+            .Where(contact => contact != null && contact.IsValid())
+            .Take(MaxContacts)
+            .ToList();
+        if (PhoneDeviceId is not null && (PhoneDeviceId.Length > 512 || PhoneDeviceId.Any(char.IsControl))) PhoneDeviceId = null;
+        if (PhoneName is not null && !IsSafeText(PhoneName, 100)) PhoneName = null;
         CustomReminders = (CustomReminders ?? new List<CustomReminderSettings>())
             .Take(MaxCustomReminders)
             .Select(reminder => reminder?.ValidateAndNormalize())
@@ -257,4 +271,51 @@ public sealed class CustomReminderSettings
         $"Every {IntervalLabel(IntervalMinutes)}, from {StartHour:00}:00 to {EndHour:00}:00, " +
         (PlayAudio ? "plays a sound, " : "") + (Speak ? "spoken" : "shown only") +
         $", {(Enabled ? "on" : "off")}";
+}
+
+public sealed class ContactSettings
+{
+    public string Name { get; set; } = "";
+    // Another name the person may say, e.g. the Arabic one ("ماما" for Mom).
+    public string? OtherName { get; set; }
+    public string Number { get; set; } = "";
+
+    public bool IsValid() =>
+        IsName(Name) && (OtherName is null || OtherName.Length == 0 || IsName(OtherName)) && IsDialable(Number);
+
+    private static bool IsName(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= 40 && !value.Any(char.IsControl);
+
+    // Digits with an optional leading +, as the phone dials them.
+    public static bool IsDialable(string? number) =>
+        number is { Length: > 0 and <= 21 } &&
+        number.Select((c, i) => char.IsAsciiDigit(c) || (c == '+' && i == 0)).All(ok => ok) &&
+        number.Any(char.IsAsciiDigit);
+
+    // Spaces, dashes, dots and brackets typed in a number are dropped.
+    public static string CleanNumber(string text) =>
+        new(text.Trim().Where((c, i) => char.IsAsciiDigit(c) || (c == '+' && i == 0)).ToArray());
+
+    public ContactSettings Copy() => new() { Name = Name, OtherName = OtherName, Number = Number };
+
+    // "647 801 6063": read in groups, which is how people say numbers.
+    public static string SpokenNumber(string number)
+    {
+        var digits = number.TrimStart('+');
+        var groups = new List<string>();
+        var i = 0;
+        while (i < digits.Length)
+        {
+            var size = digits.Length - i == 4 ? 4 : Math.Min(3, digits.Length - i);
+            groups.Add(string.Join(' ', digits.Substring(i, size).ToCharArray()));
+            i += size;
+        }
+        return (number.StartsWith('+') ? "plus " : "") + string.Join(", ", groups);
+    }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Label => string.IsNullOrWhiteSpace(OtherName) ? Name : $"{Name} — {OtherName}";
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Spoken => $"{Label}, {SpokenNumber(Number)}";
 }

@@ -20,13 +20,11 @@ public static class Program
         if (args.Length == 2 && args[0] == "--snapshot") return Snapshot.Run(args[1]);
         if (args.Length == 2 && args[0] == "--prayer-test") return Snapshot.PrayerTest(args[1]);
         if (args.Length == 2 && args[0] == "--load-trace") return Snapshot.LoadTrace(args[1]);
-        if (args.Length == 2 && args[0] == "--voice-test")
-        {
-            // The model loads only under the single-instance lock.
-            Instance = SingleInstance.TryAcquire();
-            if (Instance == null) return 1;
-            using (Instance) return Snapshot.VoiceTest(args[1]);
-        }
+        if (args.Length is 3 or 4 && args[0] == "--bt-test")
+            return Snapshot.BluetoothTest(args[1], args[2], args.Length == 4 ? args[3] : null);
+        // A debug test that loads its own copy of the model, so it may run
+        // beside an installed Mini CloClo.
+        if (args.Length == 2 && args[0] == "--voice-test") return Snapshot.VoiceTest(args[1]);
 #endif
 
         // A sign-in launch waits for Windows' security services without

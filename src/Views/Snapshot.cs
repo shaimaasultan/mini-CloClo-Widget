@@ -119,6 +119,49 @@ internal static class Snapshot
         return 0;
     }
 
+    // "MiniCloClo.exe --bt-test <report file> <device name> [number]": the
+    // experimental Bluetooth dialer. Without a number it only connects, does
+    // the hands-free handshake and disconnects; with one it also dials it.
+    public static int BluetoothTest(string reportPath, string deviceName, string? number)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        try
+        {
+            var paired = BluetoothDialer.PairedDevicesAsync().GetAwaiter().GetResult();
+            lines.Add("paired devices: " + string.Join(", ", paired.Select(d => d.Name)));
+            var phone = paired.FirstOrDefault(d => string.Equals(d.Name, deviceName, StringComparison.OrdinalIgnoreCase));
+            if (phone == null) lines.Add($"no paired device named {deviceName}");
+            else
+            {
+                var dialer = new BluetoothDialer();
+                var ok = dialer.RunAsync(phone, number).GetAwaiter().GetResult();
+                lines.AddRange(dialer.Log);
+                lines.Add(ok ? "RESULT: success" : "RESULT: failed");
+                if (ok && number != null)
+                {
+                    // Did the call outlive our disconnect? Look again after
+                    // 10 s: the second CIND value is "call" (1 = in progress).
+                    lines.Add("-- waiting 10 s disconnected, then checking the call is still up --");
+                    System.Threading.Thread.Sleep(10000);
+                    var check = new BluetoothDialer();
+                    check.RunAsync(phone, null).GetAwaiter().GetResult();
+                    lines.AddRange(check.Log);
+                    var status = check.Log.LastOrDefault(l => l.Contains("AT+CIND? ->"));
+                    var values = status?[(status.IndexOf("+CIND:") + 6)..].Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Split(',');
+                    lines.Add(values is { Length: > 1 }
+                        ? $"CALL AFTER DISCONNECT: {(values[1] == "1" ? "still in progress (call=1)" : "not in progress (call=0)")}, call setup={values[2]}"
+                        : "CALL AFTER DISCONNECT: couldn't read the phone's status");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"{ex.GetType().Name}: {ex.Message}");
+        }
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --prayer-test <report file>": today's times for a few
     // listed cities, plus the spoken date, to compare with a mosque timetable.
     public static int PrayerTest(string reportPath)
@@ -151,6 +194,7 @@ internal static class Snapshot
             ("What time is it?", false), ("What's the date?", false), ("Next prayer.", false), ("Prayer times.", false),
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
+            ("Call Mom.", false), ("Call Ahmed.", false), ("Yes.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
         };
         var lines = new System.Collections.Generic.List<string>();
@@ -160,8 +204,12 @@ internal static class Snapshot
             {
                 var samples = Synthesize(text, arabic).GetAwaiter().GetResult();
                 if (samples == null) { lines.Add($"{text} -> (no {(arabic ? "Arabic" : "English")} voice installed)"); continue; }
-                var heard = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic).GetAwaiter().GetResult();
-                string match = WidgetVoiceCommands.TryMatch(heard, out var command) ? "widget:" + command
+                var heard = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic,
+                    CallVoiceCommand.RecognitionHint(TestContacts, arabic)).GetAwaiter().GetResult();
+                string match = CallVoiceCommand.TryParse(heard) is { } who
+                        ? "call:" + (CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")")
+                    : CallVoiceCommand.IsYes(heard) ? "yes (confirms a call)"
+                    : WidgetVoiceCommands.TryMatch(heard, out var command) ? "widget:" + command
                     : ApprovedVoiceAppLauncher.IsShutdownCommand(heard) ? "shutdown"
                     : ApprovedVoiceAppLauncher.IsCancelCommand(heard) ? "cancel/stop"
                     : ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app) ? "app:" + app
@@ -177,6 +225,12 @@ internal static class Snapshot
         File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
         return 0;
     }
+
+    private static readonly ContactSettings[] TestContacts =
+    [
+        new() { Name = "Mom", OtherName = "ماما", Number = "1000" },
+        new() { Name = "Ahmed", OtherName = "أحمد", Number = "2000" },
+    ];
 
     private static async System.Threading.Tasks.Task<float[]?> Synthesize(string text, bool arabic)
     {

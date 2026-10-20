@@ -11,8 +11,9 @@ namespace MiniCloClo;
 // second (or pressing Ctrl+Alt+V, the 🎤 icon or V on the widget) opens the
 // microphone; releasing it (or pressing again) runs what was said: one of the
 // widget's own commands (the time, the date, prayer times, the Quran,
-// reminders, stop, "I prayed", help - WidgetVoiceCommands), an approved app,
-// or "shut down", which starts a full shutdown (see StartShutdownAsync).
+// reminders, stop, "I prayed", help - WidgetVoiceCommands), "call" and a
+// saved contact (MainWindow.Calls.cs), an approved app, or "shut down",
+// which starts a full shutdown (see StartShutdownAsync).
 // Every step is spoken, so it all works without seeing the screen. Shorter
 // right-clicks reach the app under the cursor as usual (RightButtonHoldHook).
 // The microphone is open only while listening, and audio is never saved.
@@ -101,9 +102,9 @@ public partial class MainWindow
 
         var arabic = _settings.VoiceCommandsInArabic;
         var session = new LocalAudioTranscriber(AudioCaptureSource.Microphone,
-            recognitionPrompt: arabic
+            recognitionPrompt: (arabic
                 ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt
-                : ApprovedVoiceAppLauncher.RecognitionPrompt);
+                : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic));
         _pushToTalk = session;
         lock (_pushToTalkText) _pushToTalkText.Clear();
         session.TextRecognized += text =>
@@ -187,9 +188,16 @@ public partial class MainWindow
             await SpeakPushToTalkStepAsync("I didn't hear a command.", "ما سمعتش أمر.");
             return;
         }
+        // "Yes" to a "call Mom?" question.
+        if (!_shutdownAwaitingClose && TryConfirmPendingCall(heard)) return;
         if (ApprovedVoiceAppLauncher.IsCancelCommand(heard))
         {
             if (await CancelShutdownByUserAsync()) return;
+            if (CancelPendingCall())
+            {
+                Keeper.SetVoiceStatus("complete");
+                return;
+            }
             // Nothing to cancel: "stop" ends whatever is playing.
             Keeper.SetVoiceStatus(StopSounds() ? "complete" : "failed");
             return;
@@ -205,6 +213,8 @@ public partial class MainWindow
             await CloseAppsThenShutDownAsync(force: false);
             return;
         }
+        // "Call Mom": read back, then dialed only after "yes".
+        if (await TryHandleCallCommandAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsShutdownCommand(heard))
         {
             await StartShutdownAsync();

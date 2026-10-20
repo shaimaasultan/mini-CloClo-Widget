@@ -7,8 +7,9 @@ namespace MiniCloClo;
 
 // Ctrl+Alt shortcuts that work from any app, so nobody has to find the
 // widget on the screen: T the time, D the date, P the next prayer, A all of
-// today's prayer times, Q the Quran, R reminders, V talk (press again to
-// finish), S stop sounds, M the menu, H help. Registered with Windows'
+// today's prayer times, Q the Quran, R reminders, K contacts and calls, V
+// talk (press again to finish), S stop sounds, M the menu, H help.
+// Registered with Windows'
 // RegisterHotKey, which only reports these exact key combinations - no
 // other keystroke is seen. A combination another app already uses is
 // skipped, and the help says which ones work.
@@ -28,6 +29,7 @@ public partial class MainWindow
         ('A', SayPrayerTimes),
         ('Q', OpenQuran),
         ('R', OpenCustomReminders),
+        ('K', OpenContacts),
         ('V', ToggleKeyboardVoiceCommand),
         ('S', () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
         ('M', OpenMenu),

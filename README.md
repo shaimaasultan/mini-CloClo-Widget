@@ -13,7 +13,9 @@ someone who can't see the screen well. It keeps only:
 - **The time and date** — large, plus the Hijri date and the next prayer.
 
 There is no weather, no location lookup and no internet at all: the build
-fails if any code tries to go online (`scripts/check-no-network.ps1`).
+fails if any code tries to go online (`scripts/check-no-network.ps1`). The one
+connection it can make is over Bluetooth, to your own paired phone, and only
+while placing a call you asked for (see [Calling](#calling)).
 Everything it shows is also spoken, and everything can be reached without
 the mouse.
 
@@ -63,6 +65,7 @@ let go (press Ctrl+Alt+V again). A short right-click still works as usual.
 | Next / اللي بعده | Marks the ayah memorized and moves to the next |
 | Previous / اللي قبله | Goes back one ayah |
 | Reminders / التذكيرات | Opens the reminders |
+| Call Mom / اتصل بماما | Reads the contact's number back, then calls after "yes" ([Calling](#calling)) |
 | Stop / اسكت | Stops the azan, a recitation or speech |
 | I prayed / صليت | Ends the prayer look |
 | Help / مساعدة | Says the commands and shortcuts |
@@ -84,6 +87,7 @@ small model. Talking to it stops a recitation or azan that is playing, so
 | **A** | All of today's prayer times |
 | **Q** | Quran memorization |
 | **R** | Custom reminders |
+| **K** | Contacts and calls |
 | **V** | Talk (press again when done) |
 | **S** | Stop sounds |
 | **M** | The menu (opens with the keyboard in it) |
@@ -95,6 +99,29 @@ still work. They can be turned off under *Voice and speech*.
 In the **Quran window**: Ctrl+P (or F5) plays/pauses, Ctrl+→ marks memorized
 and moves on, Ctrl+← goes back, Ctrl+I says where you are, Ctrl+M reads the
 English meaning. Every button also has an Alt access key.
+
+## Calling
+
+Mini CloClo can call your saved contacts through your mobile phone over
+Bluetooth, without Phone Link. Tested with an iPhone.
+
+1. Pair the phone once in **Windows Settings → Bluetooth & devices**.
+2. Press **Ctrl+Alt+K** (or menu → *Contacts and calls…*), choose **Add** for
+   each person — the name you'll say, optionally another name such as the
+   Arabic one, and the number — and **Find my phone**. Save.
+3. Say **"call Mom"** (or "اتصل بماما"). CloClo reads the number back and asks;
+   talk to it again and say **"yes"** (or "cancel"). In the window, select a
+   contact and press **Enter** to call straight away.
+
+How it works: CloClo connects to the phone's hands-free service, the way a car
+kit does, sends one dial request, and disconnects. The phone places the call
+on its own line, and **the call's sound is on the phone** (or a headset paired
+to the phone), not the PC. If Bluetooth was off, CloClo turns it on for the
+call and back off afterwards; if it was on (a Bluetooth headset in use), it
+leaves it on. Only saved contacts can be called, and a voice call is always
+confirmed first. English names are recognized reliably; Arabic is weaker with
+the small speech model, so the window (Ctrl+Alt+K, Enter) is the dependable
+way for Arabic speakers.
 
 ## What it does on its own
 
@@ -130,7 +157,7 @@ Windows.
 
 ## Where things are kept
 
-- Settings and reminders: `%APPDATA%\MiniCloClo\settings.json`
+- Settings, reminders and contacts: `%APPDATA%\MiniCloClo\settings.json`
 - Quran progress: `%APPDATA%\MiniCloClo\quran.json`
 - Error log (exception types only): `%LOCALAPPDATA%\MiniCloClo\errors.log`
 
@@ -144,13 +171,16 @@ Windows.
   startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check.
 
-Debug builds have four test switches: `MiniCloClo.exe --snapshot <folder>`
+Debug builds have five test switches: `MiniCloClo.exe --snapshot <folder>`
 draws every avatar look to PNG files, `--voice-test <file>` speaks test
 commands with a Windows voice and runs them through the recognizer, and
 `--prayer-test <file>` writes today's times for a few cities, and
 `--load-trace <file>` records which part of the app loads any networking
 library (it shows they come only from WPF's startup and Windows' speech
-voices, and that none of them connects anywhere).
+voices, and that none of them connects anywhere), and
+`--bt-test <file> <phone> [number]` connects to the paired phone and does the
+hands-free handshake — with a number it also dials it and checks the call
+outlives the disconnect.
 
 ## Credits
 
