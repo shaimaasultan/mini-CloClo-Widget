@@ -15,10 +15,8 @@ param(
 $env:PSModulePath = $PSHOME + '\Modules'
 $ErrorActionPreference = 'Stop'
 
-Get-Process -Name 'MiniCloClo' -ErrorAction SilentlyContinue | ForEach-Object {
-    $_.CloseMainWindow() | Out-Null
-    if (-not $_.WaitForExit(3000)) { Stop-Process -Id $_.Id -Force }
-}
+. (Join-Path $PSScriptRoot 'common.ps1')
+Stop-MiniCloClo
 Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'MiniCloClo' -ErrorAction SilentlyContinue
 foreach ($path in @(
     (Join-Path ([Environment]::GetFolderPath('Programs')) 'Mini CloClo.lnk'),
@@ -26,10 +24,10 @@ foreach ($path in @(
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
 }
 $target = Join-Path $env:LOCALAPPDATA 'Programs\MiniCloClo'
-if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+Remove-FolderWithRetry $target
 if ($RemoveSettings) {
     foreach ($folder in @((Join-Path $env:APPDATA 'MiniCloClo'), (Join-Path $env:LOCALAPPDATA 'MiniCloClo'))) {
-        if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force }
+        Remove-FolderWithRetry $folder
     }
     Write-Host 'Mini CloClo and its settings were removed.'
 } else {

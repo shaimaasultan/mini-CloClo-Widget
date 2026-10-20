@@ -29,16 +29,23 @@ public sealed class SingleInstance : IDisposable
 {
     private const string MutexName = @"Global\MiniCloClo.SingleInstance";
     private const string ShowEventName = @"Local\MiniCloClo.Show";
+    // Set by scripts\install.ps1 and uninstall.ps1 to ask the running copy
+    // to exit normally (saving its place and unloading the speech model)
+    // before its files are replaced or removed.
+    private const string ExitEventName = @"Local\MiniCloClo.Exit";
 
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _showRequested;
+    private readonly EventWaitHandle _exitRequested;
     private RegisteredWaitHandle? _listener;
+    private RegisteredWaitHandle? _exitListener;
     private volatile bool _held = true;
 
-    private SingleInstance(Mutex mutex, EventWaitHandle showRequested)
+    private SingleInstance(Mutex mutex, EventWaitHandle showRequested, EventWaitHandle exitRequested)
     {
         _mutex = mutex;
         _showRequested = showRequested;
+        _exitRequested = exitRequested;
     }
 
     // True from TryAcquire until Dispose. Anything that loads a speech model
@@ -72,7 +79,8 @@ public sealed class SingleInstance : IDisposable
             // copy owns it now.
         }
         var showRequested = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
-        return new SingleInstance(mutex, showRequested);
+        var exitRequested = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
+        return new SingleInstance(mutex, showRequested, exitRequested);
     }
 
     // Asks the copy that's already running to show itself. False when it
@@ -101,11 +109,20 @@ public sealed class SingleInstance : IDisposable
         _listener = ThreadPool.RegisterWaitForSingleObject(_showRequested, (_, _) => onShow(), null, Timeout.Infinite, executeOnlyOnce: false);
     }
 
+    // Called by the running copy: onExit runs (on a thread-pool thread) when
+    // an install or uninstall asks it to close.
+    public void ListenForExitRequests(Action onExit)
+    {
+        _exitListener = ThreadPool.RegisterWaitForSingleObject(_exitRequested, (_, _) => onExit(), null, Timeout.Infinite, executeOnlyOnce: true);
+    }
+
     public void Dispose()
     {
         _held = false;
         _listener?.Unregister(null);
+        _exitListener?.Unregister(null);
         _showRequested.Dispose();
+        _exitRequested.Dispose();
         try { _mutex.ReleaseMutex(); } catch { /* not owned any more */ }
         _mutex.Dispose();
     }

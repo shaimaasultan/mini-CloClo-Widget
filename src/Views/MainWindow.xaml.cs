@@ -130,6 +130,8 @@ public partial class MainWindow : Window
         StartupRegistration.RepairIfStale();
         // Starting Mini CloClo again while it runs just brings this copy back.
         Program.Instance?.ListenForShowRequests(() => Dispatcher.BeginInvoke(new Action(ShowBecauseStartedAgain)));
+        // An install or uninstall asks it to exit before touching its files.
+        Program.Instance?.ListenForExitRequests(() => Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current.Shutdown())));
         ApplyDisplaySettings();
         PlaceWindow();
         SetupTrayIcon();

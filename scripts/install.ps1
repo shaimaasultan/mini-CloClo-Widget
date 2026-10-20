@@ -50,11 +50,8 @@ Write-Host 'Packing the Quran recitations...'
 $packs = & (Join-Path $PSScriptRoot 'pack-recitations.ps1') -Root $root -OutDir $publish -DotnetExe $dotnet
 if (-not $packs) { Write-Host 'No recitations found in Assets\Recitations - the Quran window will be text only until you choose a reciter folder.' }
 
-Write-Host 'Closing a running Mini CloClo...'
-Get-Process -Name 'MiniCloClo' -ErrorAction SilentlyContinue | ForEach-Object {
-    $_.CloseMainWindow() | Out-Null
-    if (-not $_.WaitForExit(3000)) { Stop-Process -Id $_.Id -Force }
-}
+. (Join-Path $PSScriptRoot 'common.ps1')
+Stop-MiniCloClo
 
 Write-Host "Installing to $target..."
 New-Item -ItemType Directory -Force -Path $target | Out-Null
