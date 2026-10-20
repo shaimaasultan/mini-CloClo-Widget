@@ -1,0 +1,29 @@
+<Window x:Class="MiniCloClo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MiniCloClo"
+        Title="Mini CloClo"
+        AutomationProperties.Name="Mini CloClo"
+        AutomationProperties.HelpText="Press H for help, T for the time, P for the next prayer, M for the menu."
+        Width="195" Height="371"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
+    <!--
+      One window both draws the widget and takes its clicks and keys. Its
+      background is almost, but not quite, transparent: a fully transparent
+      layered window lets every click fall through to the desktop.
+    -->
+    <Window.Background>
+        <SolidColorBrush Color="#01000000" />
+    </Window.Background>
+    <Grid>
+        <local:KeeperView x:Name="Keeper" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        <!-- A visible ring while the widget has keyboard focus. -->
+        <Border x:Name="FocusRing" BorderBrush="#FFE6C476" BorderThickness="2" CornerRadius="8" Visibility="Collapsed" IsHitTestVisible="False" />
+    </Grid>
+</Window>

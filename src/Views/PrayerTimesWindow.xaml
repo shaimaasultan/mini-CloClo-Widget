@@ -1,0 +1,92 @@
+<Window x:Class="MiniCloClo.PrayerTimesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CloClo — Prayer times and azan" Width="560" SizeToContent="Height"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ShowInTaskbar="True"
+        FontSize="15"
+        Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+    <!-- Every control has a label (Target) and an access key, so it reads
+         well with Narrator and works from the keyboard alone. -->
+    <StackPanel Margin="20">
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Label Content="_City" Target="{Binding ElementName=CityBox}" VerticalAlignment="Center" />
+            <ComboBox x:Name="CityBox" Grid.Column="1" SelectionChanged="CityBox_SelectionChanged"
+                      AutomationProperties.Name="City" MaxDropDownHeight="420" />
+            <Label Grid.Row="1" Content="_Latitude" Target="{Binding ElementName=LatitudeBox}" VerticalAlignment="Center" Margin="0,6,0,0" />
+            <TextBox x:Name="LatitudeBox" Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" Padding="3"
+                     AutomationProperties.Name="Latitude, from minus 90 to 90" LostFocus="Coordinates_Changed" />
+            <Label Grid.Row="2" Content="L_ongitude" Target="{Binding ElementName=LongitudeBox}" VerticalAlignment="Center" Margin="0,6,0,0" />
+            <TextBox x:Name="LongitudeBox" Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Padding="3"
+                     AutomationProperties.Name="Longitude, from minus 180 to 180" LostFocus="Coordinates_Changed" />
+            <Label Grid.Row="3" Content="_Time zone" Target="{Binding ElementName=TimeZoneBox}" VerticalAlignment="Center" Margin="0,6,0,0" />
+            <ComboBox x:Name="TimeZoneBox" Grid.Row="3" Grid.Column="1" Margin="0,6,0,0" MaxDropDownHeight="420"
+                      AutomationProperties.Name="Time zone" SelectionChanged="Settings_Changed" />
+        </Grid>
+
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Label Content="Calc_ulation" Target="{Binding ElementName=MethodBox}" VerticalAlignment="Center" />
+            <ComboBox x:Name="MethodBox" Grid.Column="1" SelectionChanged="Settings_Changed" AutomationProperties.Name="Calculation method">
+                <ComboBoxItem Content="Egyptian General Authority" Tag="egyptian" />
+                <ComboBoxItem Content="Umm al-Qura, Makkah" Tag="makkah" />
+                <ComboBoxItem Content="Muslim World League" Tag="mwl" />
+                <ComboBoxItem Content="University of Islamic Sciences, Karachi" Tag="karachi" />
+                <ComboBoxItem Content="North America (ISNA)" Tag="isna" />
+            </ComboBox>
+            <Label Grid.Row="1" Content="_Asr" Target="{Binding ElementName=AsrBox}" VerticalAlignment="Center" Margin="0,6,0,0" />
+            <ComboBox x:Name="AsrBox" Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" SelectionChanged="Settings_Changed" AutomationProperties.Name="Asr convention">
+                <ComboBoxItem Content="Standard (Shafi'i, Maliki, Hanbali)" Tag="standard" />
+                <ComboBoxItem Content="Hanafi" Tag="hanafi" />
+            </ComboBox>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                BorderThickness="1" Padding="14" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock x:Name="ScheduleHeading" FontWeight="Bold" Margin="0,0,0,8" />
+                <TextBlock x:Name="TimesText" FontSize="20" LineHeight="34" Focusable="True"
+                           AutomationProperties.Name="Today's prayer times" />
+                <TextBlock x:Name="TimeZoneNote" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0" Opacity="0.8" />
+            </StackPanel>
+        </Border>
+
+        <CheckBox x:Name="AnnounceBox" Content="Sa_y the prayer time out loud when it comes" Margin="0,0,0,8" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <Label Content="_Remind me before each prayer" Target="{Binding ElementName=PreAlertBox}" Padding="0,0,8,0" VerticalAlignment="Center" />
+            <ComboBox x:Name="PreAlertBox" Width="150" AutomationProperties.Name="Remind me before each prayer" />
+        </StackPanel>
+        <CheckBox x:Name="EnableLookBox" Content="Show the avatar in _prayer clothes at prayer times" Margin="0,0,0,8" />
+        <CheckBox x:Name="EnableAzanBox" Content="Play the a_zan recording at prayer times" Margin="0,0,0,8" />
+        <DockPanel Margin="0,0,0,6">
+            <Button Content="C_hoose azan audio…" Click="ChooseAudio_Click" DockPanel.Dock="Left" Padding="10,5" />
+            <Button x:Name="PreviewButton" Content="Pre_view" Click="Preview_Click" DockPanel.Dock="Right" Padding="10,5" Margin="8,0,0,0" />
+            <TextBlock x:Name="AudioFileText" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,4,0,10" AutomationProperties.LiveSetting="Assertive" />
+
+        <DockPanel>
+            <Button Content="Rea_d times aloud" Click="ReadAloud_Click" Padding="10,5" DockPanel.Dock="Left" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" IsCancel="True" MinWidth="85" Margin="0,0,8,0" Padding="10,5" />
+                <Button Content="_Save" IsDefault="True" MinWidth="85" Click="Save_Click" Padding="10,5" />
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

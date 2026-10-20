@@ -1,0 +1,14 @@
+# Every text file is checked out with Windows (CRLF) line endings, whatever
+# git's core.autocrlf says, so the working files stay byte-for-byte stable.
+# (In the repository itself text is stored with LF.)
+* text=auto eol=crlf
+# Batch files must have CRLF, or cmd.exe can mis-handle labels and goto.
+*.cmd text eol=crlf
+# Binary files are never converted.
+*.ico binary
+*.png binary
+*.pfx binary
+Assets/Models/ggml-base.bin filter=lfs diff=lfs merge=lfs -text
+# The Tanzil Quran text and metadata are kept byte-for-byte as published
+# (their licence forbids changing the text), so never convert them.
+Assets/Quran/* -text

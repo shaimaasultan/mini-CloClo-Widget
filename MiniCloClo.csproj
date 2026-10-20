@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>config\app.manifest</ApplicationManifest>
+    <AssemblyName>MiniCloClo</AssemblyName>
+    <RootNamespace>MiniCloClo</RootNamespace>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>Mini CloClo</Product>
+    <Description>An offline talking clock widget with voice commands, reminders, azan and Quran memorization.</Description>
+    <!-- Program.Main, not WPF's generated one: it takes the single-instance
+         lock and hardens DLL loading before WPF starts. -->
+    <StartupObject>MiniCloClo.Program</StartupObject>
+    <!-- Ignore DOTNET_STARTUP_HOOKS: that variable otherwise makes .NET run
+         any DLL's code before Main. -->
+    <StartupHookSupport>false</StartupHookSupport>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- Mini CloClo is published as a plain folder (scripts\install.ps1):
+         nothing is unpacked to %TEMP% at start, so there is no extraction
+         folder for another program to plant a DLL in. -->
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="3.1.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <!-- The CPU runtime is copied as four explicit win-x64 files below. Its
+         default build target copies other architectures into subdirectories. -->
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" GeneratePathProperty="true" ExcludeAssets="build" />
+  </ItemGroup>
+
+  <!-- The Quran text, surah names and Saheeh International's English meaning,
+       from tanzil.net, unchanged and compiled into the exe, so nothing can
+       swap the text on disk and nothing is fetched. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Quran\quran-uthmani.txt" LogicalName="MiniCloClo.Quran.quran-uthmani.txt" />
+    <EmbeddedResource Include="Assets\Quran\quran-data.xml" LogicalName="MiniCloClo.Quran.quran-data.xml" />
+    <EmbeddedResource Include="Assets\Quran\en.sahih.txt" LogicalName="MiniCloClo.Quran.en.sahih.txt" />
+  </ItemGroup>
+
+  <!-- The speech model is inert data beside the exe; PlaybackModelStore
+       checks its size and SHA-256 before Whisper gets it. -->
+  <ItemGroup>
+    <Content Include="Assets\Models\ggml-base.bin" Link="ggml-base.bin"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Remove="Assets\Recitations\**" />
+  </ItemGroup>
+
+  <Target Name="VerifyBundledWhisperModel" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Assets\Models\ggml-base.bin')"
+           Text="The Whisper speech model Assets\Models\ggml-base.bin is missing." />
+    <GetFileHash Files="$(MSBuildProjectDirectory)\Assets\Models\ggml-base.bin" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_BundledModelHash" />
+    </GetFileHash>
+    <Error Condition="'%(_BundledModelHash.FileHash)' != '60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE'"
+           Text="The Whisper speech model is incomplete or altered." />
+  </Target>
+
+  <!-- The four Whisper CPU DLLs, checked byte for byte against the pinned
+       Whisper.net.Runtime 1.9.1 package, then copied beside the exe. -->
+  <ItemGroup>
+    <_WhisperSource Include="$(PkgWhisper_net_Runtime)\build\win-x64\ggml-base-whisper.dll" ExpectedHash="E6C362421B6D5A5C1B52341F88D3D72764DE29F05141748CC3FAAD2F6348063F" />
+    <_WhisperSource Include="$(PkgWhisper_net_Runtime)\build\win-x64\ggml-cpu-whisper.dll" ExpectedHash="480A23AFC6DEEA301C5CDA66CF462FA2F2EB7FF9BCA63B8F4F933A0E8DC5D4DD" />
+    <_WhisperSource Include="$(PkgWhisper_net_Runtime)\build\win-x64\ggml-whisper.dll" ExpectedHash="2E0AC238C2BC178A5C1F09B3BDE2421904B191BCE1CC1C13DC64309CA3B9CB36" />
+    <_WhisperSource Include="$(PkgWhisper_net_Runtime)\build\win-x64\whisper.dll" ExpectedHash="07EC2FAC4946005BA7380F2C2E9CCFA3AD23007592D074AA698ED5DF6BFB4938" />
+    <Content Include="@(_WhisperSource)" Link="%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="VerifyWhisperRuntime" BeforeTargets="CoreCompile">
+    <GetFileHash Files="@(_WhisperSource)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_WhisperSourceHash" />
+    </GetFileHash>
+    <Error Condition="'%(_WhisperSourceHash.FileHash)' != '%(_WhisperSourceHash.ExpectedHash)'"
+           Text="Whisper CPU runtime differs from the pinned 1.9.1 package: %(_WhisperSourceHash.Identity)" />
+  </Target>
+
+  <!-- Mini CloClo never goes online: the build fails if any source file
+       creates an HTTP client, socket or web request. -->
+  <Target Name="CheckNoNetwork" BeforeTargets="CoreCompile">
+    <PropertyGroup><_NetworkScanList>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)network-scan.txt</_NetworkScanList></PropertyGroup>
+    <WriteLinesToFile File="$(_NetworkScanList)" Lines="@(Compile->'%(FullPath)')" Overwrite="true" />
+    <Exec Command="&quot;$(SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\scripts\check-no-network.ps1&quot; -ListFile &quot;$(_NetworkScanList)&quot;" />
+  </Target>
+
+</Project>

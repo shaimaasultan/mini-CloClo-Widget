@@ -1,0 +1,7 @@
+bin/
+obj/
+publish/
+*.user
+# Per-ayah Quran recitations for local use (large, and not ours to
+# redistribute); scripts/install.ps1 packs them from here.
+Assets/Recitations/

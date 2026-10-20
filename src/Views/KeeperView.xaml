@@ -1,0 +1,449 @@
+<UserControl x:Class="MiniCloClo.KeeperView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="195" Height="380"
+             IsHitTestVisible="False"
+             UseLayoutRounding="False"
+             TextOptions.TextFormattingMode="Ideal">
+    <!--
+      Mini CloClo's widget: the avatar with its everyday, sleep, reminder,
+      prayer, Quran and voice-status looks, the time on top and the date,
+      Hijri date and next prayer underneath, each on a dark plate so it reads
+      on any wallpaper. Laid out on a 150x292 canvas and scaled 1.3x (times
+      the chosen widget size, see SetSize) as a whole - the click rects in
+      MainWindow.xaml.cs are in those same units. The keeper art keeps its
+      100x140 coordinates. Never takes mouse input itself.
+    -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="Body1" Color="#6b2b26" />
+        <SolidColorBrush x:Key="Metal1" Color="#e6c476" />
+        <SolidColorBrush x:Key="Metal3" Color="#8a6a2f" />
+        <SolidColorBrush x:Key="Face" Color="#ede3ce" />
+        <SolidColorBrush x:Key="Ink" Color="#241e1a" />
+        <SolidColorBrush x:Key="BlackText" Color="#000000" />
+        <SolidColorBrush x:Key="WhiteText" Color="#ffffff" />
+        <SolidColorBrush x:Key="Highlight" Color="#f3d78b" />
+        <SolidColorBrush x:Key="Sweater" Color="#b0483d" />
+        <SolidColorBrush x:Key="Skin" Color="#e8b98c" />
+        <SolidColorBrush x:Key="Hair" Color="#3a2a20" />
+        <SolidColorBrush x:Key="Raincoat" Color="#e2b640" />
+        <SolidColorBrush x:Key="RaincoatDark" Color="#b98f25" />
+        <SolidColorBrush x:Key="Wool" Color="#b8463e" />
+        <SolidColorBrush x:Key="Cream" Color="#ede5d4" />
+        <SolidColorBrush x:Key="Paper" Color="#f3ecdd" />
+        <SolidColorBrush x:Key="Shades" Color="#1f1b1a" />
+        <!-- Lady Keeper only. -->
+        <SolidColorBrush x:Key="Skirt" Color="#4b3f72" />
+        <SolidColorBrush x:Key="Petal" Color="#e8907c" />
+        <SolidColorBrush x:Key="Lips" Color="#b5525a" />
+        <SolidColorBrush x:Key="Trousers" Color="#46506a" />
+        <SolidColorBrush x:Key="Shoes" Color="#2a2320" />
+        <!-- Gym clothes (workout break) and night clothes (asleep). -->
+        <SolidColorBrush x:Key="GymTop" Color="#3c8fd0" />
+        <SolidColorBrush x:Key="GymTopLady" Color="#e0607e" />
+        <SolidColorBrush x:Key="GymShorts" Color="#2b2d3a" />
+        <SolidColorBrush x:Key="Leggings" Color="#3a2f4f" />
+        <SolidColorBrush x:Key="Sneakers" Color="#f2f0ea" />
+        <SolidColorBrush x:Key="Headband" Color="#e04848" />
+        <SolidColorBrush x:Key="Pajama" Color="#7f9cc9" />
+        <SolidColorBrush x:Key="PajamaStripe" Color="#b9cbe6" />
+        <SolidColorBrush x:Key="Nightgown" Color="#e3a9b9" />
+        <SolidColorBrush x:Key="ReminderTop" Color="#397f76" />
+        <SolidColorBrush x:Key="ReminderAccent" Color="#f0cf78" />
+        <SolidColorBrush x:Key="Slippers" Color="#c9b8a6" />
+        <!-- Prayer time: a white thobe and kufi (Keeper), a soft lilac
+             prayer dress and hijab (Lady Keeper), and a prayer mat. -->
+        <SolidColorBrush x:Key="PrayerRobe" Color="#f4f1ea" />
+        <SolidColorBrush x:Key="PrayerRobeEdge" Color="#cfc6b3" />
+        <SolidColorBrush x:Key="PrayerDress" Color="#e9e3f0" />
+        <SolidColorBrush x:Key="PrayerDressEdge" Color="#b9add0" />
+        <SolidColorBrush x:Key="Hijab" Color="#c9bedb" />
+        <SolidColorBrush x:Key="HijabEdge" Color="#9f90b8" />
+        <SolidColorBrush x:Key="Kufi" Color="#fbfaf6" />
+        <SolidColorBrush x:Key="PrayerMat" Color="#2e6a52" />
+        <SolidColorBrush x:Key="PrayerMatDark" Color="#24543f" />
+        <SolidColorBrush x:Key="PrayerMatGold" Color="#d8b25a" />
+        <!-- The weather moon: a cream disc in warm moonlight. -->
+        <SolidColorBrush x:Key="MoonDisc" Color="#f8f2dc" />
+        <SolidColorBrush x:Key="MoonGlow" Color="#ffe7a0" />
+        <DropShadowEffect x:Key="MoonShine" Color="#fff0c0" ShadowDepth="0" BlurRadius="10" Opacity="1" />
+
+        <!-- Dark lettering stays legible on light wallpaper; a soft light
+             halo preserves its edge over darker wallpaper. -->
+        <DropShadowEffect x:Key="TextHalo" Color="White" Direction="270" ShadowDepth="0" BlurRadius="2" Opacity="0.85" />
+        <DropShadowEffect x:Key="TextShadow" Color="Black" Direction="270" ShadowDepth="1" BlurRadius="6" Opacity="0.9" />
+        <DropShadowEffect x:Key="BatteryShadow" Color="Black" Direction="270" ShadowDepth="1" BlurRadius="6" Opacity="0.9" />
+        <DropShadowEffect x:Key="IconShadow" Color="Black" Direction="270" ShadowDepth="1" BlurRadius="3" Opacity="0.4" />
+
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Foreground" Value="{StaticResource WhiteText}" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+        <!-- A dark rounded plate behind each text line: white on near-black
+             is readable on any wallpaper, light or dark. -->
+        <Style x:Key="Plate" TargetType="Border">
+            <Setter Property="Background" Value="#E0141010" />
+            <Setter Property="BorderBrush" Value="#99e6c476" />
+            <Setter Property="BorderThickness" Value="0.6" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="5,0.5,5,1" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <!-- WPF draws emoji in monochrome only (no color-font support), so
+             use the same high-contrast ink and halo as the labels. -->
+        <Style x:Key="IconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI Emoji" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource WhiteText}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="MediaIcon" TargetType="Grid">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Margin" Value="1.5,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Canvas x:Name="Stage" Width="150" Height="292" ClipToBounds="True">
+        <Canvas.LayoutTransform>
+            <ScaleTransform x:Name="StageScale" ScaleX="1.3" ScaleY="1.3" />
+        </Canvas.LayoutTransform>
+
+        <!-- ===== the sky by the local clock: the sun by day, the moon at night ===== -->
+        <Canvas x:Name="Sparkle" Width="150" Height="292" ClipToBounds="True">
+            <Canvas x:Name="Sun" Canvas.Left="120" Canvas.Top="30" Width="26" Height="26" Visibility="Collapsed">
+                <Ellipse Canvas.Left="6" Canvas.Top="6" Width="14" Height="14" Fill="{StaticResource Highlight}">
+                    <Ellipse.Effect><BlurEffect Radius="10" /></Ellipse.Effect>
+                </Ellipse>
+                <Ellipse Canvas.Left="8" Canvas.Top="8" Width="10" Height="10" Fill="{StaticResource Highlight}" />
+                <Canvas x:Name="SunRays" />
+            </Canvas>
+
+            <Canvas x:Name="Moon" Canvas.Left="120" Canvas.Top="30" Width="26" Height="26" Visibility="Collapsed">
+                <Ellipse x:Name="Star1" Canvas.Left="-6" Canvas.Top="2" Width="2" Height="2" Fill="White" Opacity="0.85" />
+                <!-- Warm moonlight around a cream disc, so it glows on light
+                     wallpaper too, not only on dark. -->
+                <Ellipse Canvas.Left="-5" Canvas.Top="-5" Width="36" Height="36" Fill="{StaticResource MoonGlow}" Opacity="0.6">
+                    <Ellipse.Effect><BlurEffect Radius="12" /></Ellipse.Effect>
+                </Ellipse>
+                <Ellipse Canvas.Left="1" Canvas.Top="1" Width="24" Height="24" Fill="#fff6dc" Opacity="0.75">
+                    <Ellipse.Effect><BlurEffect Radius="8" /></Ellipse.Effect>
+                </Ellipse>
+                <Ellipse Canvas.Left="3" Canvas.Top="3" Width="20" Height="20" Fill="{StaticResource MoonDisc}" Effect="{StaticResource MoonShine}" />
+                <Ellipse Canvas.Left="6" Canvas.Top="8" Width="4" Height="4" Fill="#cfd6e4" Opacity="0.7" />
+                <Ellipse Canvas.Left="12" Canvas.Top="14" Width="3" Height="3" Fill="#cfd6e4" Opacity="0.7" />
+                <Ellipse Canvas.Left="14" Canvas.Top="6" Width="2" Height="2" Fill="#cfd6e4" Opacity="0.7" />
+                <Ellipse x:Name="Star2" Canvas.Left="24" Canvas.Top="16" Width="2" Height="2" Fill="White" Opacity="0.85" />
+            </Canvas>
+        </Canvas>
+
+        <!-- ===== Keeper ===== -->
+        <Canvas x:Name="KeeperWrap" Canvas.Left="21" Canvas.Top="24" Width="108" Height="149" RenderTransformOrigin="0.5,1">
+            <Canvas.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="WrapScale" />
+                    <RotateTransform x:Name="WrapRotate" />
+                    <TranslateTransform x:Name="WrapTranslate" />
+                </TransformGroup>
+            </Canvas.RenderTransform>
+            <Viewbox Width="108" Height="145" Stretch="Uniform">
+                <Canvas Width="100" Height="140">
+                    <!-- Prayer time: a prayer mat on the floor, under the feet. -->
+                    <Canvas x:Name="PrayerMat" Visibility="Collapsed">
+                        <Path Data="M22 121 L78 121 L86 137 L14 137 Z" Fill="{StaticResource PrayerMat}" Stroke="{StaticResource PrayerMatGold}" StrokeThickness="1" StrokeLineJoin="Round" />
+                        <Path Data="M25 123 L75 123 L81 135 L19 135 Z" Fill="{StaticResource PrayerMatDark}" Stroke="{StaticResource PrayerMatGold}" StrokeThickness="0.5" Opacity="0.9" />
+                        <Path Data="M26 126 L29 129 L26 132 L23 129 Z M74 126 L77 129 L74 132 L71 129 Z" Fill="{StaticResource PrayerMatGold}" Opacity="0.85" />
+                        <Path Data="M18 137 L17.5 139.5 M24 137 L23.8 139.5 M30 137 L30 139.5 M36 137 L36 139.5 M64 137 L64 139.5 M70 137 L70 139.5 M76 137 L76.2 139.5 M82 137 L82.5 139.5"
+                              Stroke="{StaticResource PrayerMatGold}" StrokeThickness="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    </Canvas>
+                    <Ellipse Canvas.Left="28" Canvas.Top="130" Width="44" Height="8" Fill="Black" Opacity="0.22" />
+                    <Rectangle x:Name="LegL" Canvas.Left="40.5" Canvas.Top="104" Width="8.5" Height="25" RadiusX="4" RadiusY="4" Fill="{StaticResource Trousers}" />
+                    <Rectangle x:Name="LegR" Canvas.Left="51" Canvas.Top="104" Width="8.5" Height="25" RadiusX="4" RadiusY="4" Fill="{StaticResource Trousers}" />
+                    <Ellipse x:Name="ShoeL" Canvas.Left="38" Canvas.Top="126.2" Width="13" Height="7.6" Fill="{StaticResource Shoes}" />
+                    <Ellipse x:Name="ShoeR" Canvas.Left="49" Canvas.Top="126.2" Width="13" Height="7.6" Fill="{StaticResource Shoes}" />
+
+                    <!-- Lady Keeper: a skirt over the legs, under whichever top or coat is on. -->
+                    <Path x:Name="LadySkirt" Data="M33 100 L67 100 L72 117 Q50 121 28 117 Z" Fill="{StaticResource Skirt}" Visibility="Collapsed" />
+                    <Canvas x:Name="TorsoDefault">
+                        <Path x:Name="SweaterBody" Data="M31 106 Q29 78 50 73 Q71 78 69 106 Z" Fill="{StaticResource Sweater}" />
+                        <Path Data="M43 74 q7 6 14 0" Stroke="{StaticResource Metal3}" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    </Canvas>
+                    <!-- A teal reminder cardigan with a small note pocket. -->
+                    <Canvas x:Name="ReminderTop" Visibility="Collapsed">
+                        <Path Data="M31 106 Q29 78 50 73 Q71 78 69 106 Z" Fill="{StaticResource ReminderTop}" />
+                        <Path Data="M43 74 q7 6 14 0" Stroke="{StaticResource Paper}" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Rectangle Canvas.Left="56.5" Canvas.Top="85" Width="8.5" Height="11" RadiusX="1" RadiusY="1" Fill="{StaticResource ReminderAccent}" />
+                        <Line X1="58.5" Y1="88" X2="63" Y2="88" Stroke="{StaticResource Hair}" StrokeThickness="0.8" />
+                        <Line X1="58.5" Y1="91" X2="63" Y2="91" Stroke="{StaticResource Hair}" StrokeThickness="0.8" />
+                    </Canvas>
+                    <!-- Asleep (Keeper): striped pyjamas. -->
+                    <Canvas x:Name="PajamaTop" Visibility="Collapsed">
+                        <Path Data="M31 106 Q29 78 50 73 Q71 78 69 106 Z" Fill="{StaticResource Pajama}" />
+                        <Path Data="M38 77 L37 106 M44 74.5 L44 106 M56 74.5 L56 106 M62 77 L63 106" Stroke="{StaticResource PajamaStripe}" StrokeThickness="1.4" />
+                        <Path Data="M43 74 L50 82 L57 74" Stroke="{StaticResource PajamaStripe}" StrokeThickness="1.6" StrokeLineJoin="Round" />
+                        <Ellipse Canvas.Left="49" Canvas.Top="87" Width="2.2" Height="2.2" Fill="{StaticResource Paper}" />
+                        <Ellipse Canvas.Left="49" Canvas.Top="95" Width="2.2" Height="2.2" Fill="{StaticResource Paper}" />
+                    </Canvas>
+                    <!-- Asleep (Lady Keeper): a long nightgown. -->
+                    <Canvas x:Name="Nightgown" Visibility="Collapsed">
+                        <Path Data="M31 106 Q29 78 50 73 Q71 78 69 106 L73 124 Q50 128 27 124 Z" Fill="{StaticResource Nightgown}" />
+                        <Path Data="M43 74 Q50 81 57 74" Stroke="{StaticResource Paper}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="M28 122 Q31 125 34 123 Q37 126 40 124 Q43 127 46 124.5 Q50 127.5 54 124.5 Q57 127 60 124 Q63 126 66 123 Q69 125 72 122" Stroke="{StaticResource Paper}" StrokeThickness="1.2" Opacity="0.85" />
+                    </Canvas>
+                    <!-- Prayer time (Keeper): a long white thobe to the ankles. -->
+                    <Canvas x:Name="PrayerRobe" Visibility="Collapsed">
+                        <Path Data="M31 106 Q29 78 50 73 Q71 78 69 106 L71 128 Q50 131 29 128 Z" Fill="{StaticResource PrayerRobe}" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="0.6" />
+                        <Path Data="M45 74 Q50 78.5 55 74 M50 77.5 L50 97" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="0.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="49.1" Canvas.Top="80.5" Width="1.8" Height="1.8" Fill="{StaticResource PrayerRobeEdge}" />
+                    </Canvas>
+                    <!-- Prayer time (Lady Keeper): a loose prayer dress to the ankles. -->
+                    <Canvas x:Name="PrayerDress" Visibility="Collapsed">
+                        <Path Data="M30 106 Q28 78 50 73 Q72 78 70 106 L74 128 Q50 132 26 128 Z" Fill="{StaticResource PrayerDress}" Stroke="{StaticResource PrayerDressEdge}" StrokeThickness="0.6" />
+                        <Path Data="M28 124.5 Q50 128.5 72 124.5" Stroke="{StaticResource PrayerDressEdge}" StrokeThickness="0.8" Opacity="0.8" />
+                    </Canvas>
+                    <!-- Shows the account name on the everyday shirt and the
+                         remaining break time on the gym shirt. -->
+                    <TextBlock x:Name="WorkoutCountdown" Canvas.Left="30" Canvas.Top="83.3" Width="40" TextAlignment="Center"
+                               FontFamily="IBM Plex Mono, Segoe UI" FontWeight="Bold" FontSize="9" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                               Foreground="{StaticResource Paper}" Visibility="Collapsed" Text="2:00" />
+
+                    <!-- Small voice-status pin at the collar, clear of the shirt name and arm poses. -->
+                    <Canvas x:Name="VoiceStatusPin" Canvas.Left="44" Canvas.Top="72" Width="12" Height="12"
+                            Visibility="Collapsed" IsHitTestVisible="False" Panel.ZIndex="10">
+                        <Ellipse x:Name="VoicePinBody" Width="12" Height="12" Fill="DeepSkyBlue"
+                                 Stroke="#23313B" StrokeThickness="1.2" />
+                        <Canvas x:Name="VoiceMicGlyph">
+                            <Rectangle Canvas.Left="4.6" Canvas.Top="2.2" Width="2.8" Height="5" RadiusX="1.4" RadiusY="1.4" Fill="White" />
+                            <Path Data="M3 5.4 Q3 8.4 6 8.4 Q9 8.4 9 5.4 M6 8.4 L6 10 M4.4 10 L7.6 10"
+                                  Stroke="White" StrokeThickness="0.9" StrokeStartLineCap="Round" />
+                        </Canvas>
+                        <Canvas x:Name="VoiceWorkingGlyph" Visibility="Collapsed">
+                            <Ellipse Canvas.Left="2.2" Canvas.Top="5.2" Width="1.6" Height="1.6" Fill="White" />
+                            <Ellipse Canvas.Left="5.2" Canvas.Top="5.2" Width="1.6" Height="1.6" Fill="White" />
+                            <Ellipse Canvas.Left="8.2" Canvas.Top="5.2" Width="1.6" Height="1.6" Fill="White" />
+                        </Canvas>
+                        <Path x:Name="VoiceDoneGlyph" Data="M2.7 6.1 L5 8.2 L9.3 3.7" Stroke="White"
+                              StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round" Visibility="Collapsed" />
+                        <Canvas x:Name="VoiceFailedGlyph" Visibility="Collapsed">
+                            <Line X1="6" Y1="2.8" X2="6" Y2="7.1" Stroke="White" StrokeThickness="1.6" StrokeStartLineCap="Round" />
+                            <Ellipse Canvas.Left="5.1" Canvas.Top="8.3" Width="1.8" Height="1.8" Fill="White" />
+                        </Canvas>
+                    </Canvas>
+                    <Canvas x:Name="Head">
+                        <Canvas.RenderTransform>
+                            <TransformGroup>
+                                <RotateTransform x:Name="HeadRotate" CenterX="50" CenterY="50" />
+                                <RotateTransform x:Name="VoiceHeadRotate" CenterX="50" CenterY="50" />
+                            </TransformGroup>
+                        </Canvas.RenderTransform>
+                        <!-- Lady Keeper: long hair behind the head, falling over the shoulders. -->
+                        <Path x:Name="LadyHairBack" Data="M25 50 Q22 21 50 21 Q78 21 75 50 Q78 70 76 84 Q71 88 66 84 Q66 76 62 70 L38 70 Q34 76 34 84 Q29 88 24 84 Q22 70 25 50 Z"
+                              Fill="{StaticResource Hair}" Visibility="Collapsed" />
+                        <Ellipse Canvas.Left="23" Canvas.Top="48.5" Width="9" Height="9" Fill="{StaticResource Skin}" />
+                        <Ellipse Canvas.Left="68" Canvas.Top="48.5" Width="9" Height="9" Fill="{StaticResource Skin}" />
+                        <Ellipse Canvas.Left="27.5" Canvas.Top="27.5" Width="45" Height="45" Fill="{StaticResource Skin}" />
+                        <Ellipse Canvas.Left="33.8" Canvas.Top="54.8" Width="6.4" Height="6.4" Fill="#e8907c" Opacity="0.45" />
+                        <Ellipse Canvas.Left="59.8" Canvas.Top="54.8" Width="6.4" Height="6.4" Fill="#e8907c" Opacity="0.45" />
+                        <Path x:Name="HairDefault" Data="M27.5 50 Q26 25 50 25 Q74 25 72.5 50 Q68 38 58 37 Q53 31 45 35 Q34 37 27.5 50 Z" Fill="{StaticResource Hair}" />
+                        <!-- Lady Keeper: a side-swept fringe, locks over the ears and a flower clip. -->
+                        <Canvas x:Name="LadyHairFront" Visibility="Collapsed">
+                            <Path Data="M27.5 52 Q25 24 50 24 Q75 24 72.5 52 Q70 40 62 36 Q52 40 40 35 Q31 39 27.5 52 Z" Fill="{StaticResource Hair}" />
+                            <Path Data="M22 45 Q21.5 60 26 67 L31.5 64 Q29.5 56 30 45 Z" Fill="{StaticResource Hair}" />
+                            <Path Data="M78 45 Q78.5 60 74 67 L68.5 64 Q70.5 56 70 45 Z" Fill="{StaticResource Hair}" />
+                            <Ellipse Canvas.Left="63" Canvas.Top="28" Width="4.4" Height="4.4" Fill="{StaticResource Petal}" />
+                            <Ellipse Canvas.Left="67" Canvas.Top="30" Width="4.4" Height="4.4" Fill="{StaticResource Petal}" />
+                            <Ellipse Canvas.Left="65.6" Canvas.Top="33.6" Width="4.4" Height="4.4" Fill="{StaticResource Petal}" />
+                            <Ellipse Canvas.Left="61.6" Canvas.Top="32.4" Width="4.4" Height="4.4" Fill="{StaticResource Petal}" />
+                            <Ellipse Canvas.Left="65.1" Canvas.Top="31.1" Width="2.8" Height="2.8" Fill="{StaticResource Highlight}" />
+                        </Canvas>
+
+                        <Canvas x:Name="EyesOpen">
+                            <Ellipse Canvas.Left="39.4" Canvas.Top="49.4" Width="5.2" Height="5.2" Fill="{StaticResource Ink}" />
+                            <Ellipse Canvas.Left="55.4" Canvas.Top="49.4" Width="5.2" Height="5.2" Fill="{StaticResource Ink}" />
+                            <Ellipse Canvas.Left="42.1" Canvas.Top="50.3" Width="1.6" Height="1.6" Fill="White" />
+                            <Ellipse Canvas.Left="58.1" Canvas.Top="50.3" Width="1.6" Height="1.6" Fill="White" />
+                            <Path x:Name="LadyLashes" Data="M39.8 50.4 L37.6 48.8 M41 49.6 L39.8 47.6 M60.2 50.4 L62.4 48.8 M59 49.6 L60.2 47.6"
+                                  Stroke="{StaticResource Ink}" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed" />
+                        </Canvas>
+                        <Path x:Name="EyesClosed" Data="M38.5 52 q3.5 3 7 0 M54.5 52 q3.5 3 7 0" Stroke="{StaticResource Hair}" StrokeThickness="1.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed" />
+
+                        <Path x:Name="MouthAwake" Data="M46 62 q4 3 8 0" Stroke="{StaticResource Hair}" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path x:Name="MouthSleep" Data="M47 62.5 q3 2 6 0" Stroke="{StaticResource Hair}" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed" />
+                        <Ellipse x:Name="MouthWorkout" Canvas.Left="47.7" Canvas.Top="60.1" Width="4.6" Height="5.8" Fill="{StaticResource Hair}" Visibility="Collapsed" />
+                        <Canvas x:Name="Zzz" Visibility="Collapsed">
+                            <TextBlock x:Name="Z1" Canvas.Left="70" Canvas.Top="26.4" Text="z" FontFamily="Segoe UI" FontWeight="Bold" FontSize="7" Foreground="{StaticResource Paper}" Opacity="0.6">
+                                <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                            </TextBlock>
+                            <TextBlock x:Name="Z2" Canvas.Left="76" Canvas.Top="20.1" Text="z" FontFamily="Segoe UI" FontWeight="Bold" FontSize="5.5" Foreground="{StaticResource Paper}" Opacity="0.45">
+                                <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                            </TextBlock>
+                        </Canvas>
+
+
+
+                        <!-- Asleep: a nightcap, its tip drooping away from the z's. -->
+                        <Canvas x:Name="Nightcap" Visibility="Collapsed">
+                            <Path x:Name="NightcapBody" Data="M73 44 Q73 20 50 20 Q32 20 18 40 L24 42 Q28 32 34 30 Q28 36 27 44 Z" Fill="{StaticResource Pajama}" />
+                            <Rectangle Canvas.Left="26" Canvas.Top="39" Width="48" Height="7" RadiusX="3.5" RadiusY="3.5" Fill="{StaticResource Paper}" />
+                            <Ellipse Canvas.Left="14.5" Canvas.Top="37" Width="7" Height="7" Fill="{StaticResource Paper}" />
+                        </Canvas>
+                        <!-- Prayer time (Keeper): a white kufi cap. -->
+                        <Canvas x:Name="Kufi" Visibility="Collapsed">
+                            <Path Data="M31 41 Q31 25 50 25 Q69 25 69 41 Q50 37 31 41 Z" Fill="{StaticResource Kufi}" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="0.6" />
+                            <Path Data="M32.5 38 Q50 34 67.5 38" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="0.6" StrokeDashArray="1.5 1.2" />
+                        </Canvas>
+                        <!-- Prayer time (Lady Keeper): a hijab framing the face,
+                             covering the hair and ears and draping over the shoulders. -->
+                        <Path x:Name="Hijab" Data="M21 54 Q19 17 50 17 Q81 17 79 54 Q81 74 76 88 Q50 95 24 88 Q19 74 21 54 Z M32.5 51 A17.5 20.5 0 1 1 67.5 51 A17.5 20.5 0 1 1 32.5 51 Z"
+                              Fill="{StaticResource Hijab}" Stroke="{StaticResource HijabEdge}" StrokeThickness="0.7" Visibility="Collapsed" />
+                    </Canvas>
+
+                    <Canvas x:Name="HangingArms">
+                        <Path x:Name="ArmL" Data="M35 80 Q28 92 31 102" Stroke="{StaticResource Sweater}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="27" Canvas.Top="98" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        <Canvas x:Name="RightArm">
+                            <Canvas.RenderTransform><TranslateTransform x:Name="RightArmShift" /></Canvas.RenderTransform>
+                            <Path x:Name="ArmR" Data="M65 80 Q72 92 69 102" Stroke="{StaticResource Sweater}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Ellipse Canvas.Left="65" Canvas.Top="98" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        </Canvas>
+                    </Canvas>
+
+                    <!-- The brief startup greeting salute. -->
+                    <Canvas x:Name="SalutePose" Visibility="Collapsed">
+                        <Path Data="M35 80 Q28 92 31 102" Stroke="{Binding ElementName=ArmL, Path=Stroke}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="27" Canvas.Top="98" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        <Canvas x:Name="SaluteRightArm">
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <TranslateTransform x:Name="SaluteArmShift" />
+                                    <RotateTransform x:Name="SaluteArmWave" CenterX="65" CenterY="80" />
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+                            <Path Data="M65 80 Q70 70 71 60 Q72 55 68 51" Stroke="{Binding ElementName=ArmR, Path=Stroke}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Ellipse Canvas.Left="64" Canvas.Top="47" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        </Canvas>
+                    </Canvas>
+
+                    <!-- Prayer time: standing calmly with the hands folded on the
+                         chest, right over left. Each sleeve has a soft edge so it
+                         reads against the robe of the same colour. -->
+                    <Canvas x:Name="PrayerArms" Visibility="Collapsed">
+                        <Path x:Name="PrayerArmLEdge" Data="M35 80 Q29 93 47 95" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="8.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path x:Name="PrayerArmL" Data="M35 80 Q29 93 47 95" Stroke="{StaticResource PrayerRobe}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="44" Canvas.Top="91" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        <Path x:Name="PrayerArmREdge" Data="M65 80 Q71 91 53 92" Stroke="{StaticResource PrayerRobeEdge}" StrokeThickness="8.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path x:Name="PrayerArmR" Data="M65 80 Q71 91 53 92" Stroke="{StaticResource PrayerRobe}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="48" Canvas.Top="87.5" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                    </Canvas>
+                    <!-- Prayer time: the "I've prayed" check beside the head. A
+                         click on it (or on the head) ends the prayer look -
+                         PrayedRect in MainWindow.xaml.cs must match. -->
+                    <Canvas x:Name="PrayedBadge" Canvas.Left="80" Canvas.Top="18" Width="13" Height="13" Visibility="Collapsed">
+                        <Ellipse Width="13" Height="13" Fill="#2e8b57" Stroke="White" StrokeThickness="1.1" />
+                        <Path Data="M3.6 6.8 L5.7 8.9 L9.6 4.4" Stroke="White" StrokeThickness="1.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                    </Canvas>
+
+                    <!-- Reading the Quran: a green mushaf held open in both
+                         hands while a recitation plays (SetReading). -->
+                    <Canvas x:Name="QuranPose" Visibility="Collapsed" IsHitTestVisible="False">
+                        <Path Data="M35,80 Q31,86 33,93" Stroke="{Binding ElementName=ArmL, Path=Stroke}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="M65,80 Q69,86 67,93" Stroke="{Binding ElementName=ArmR, Path=Stroke}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="M30,84 Q40,80 50,84 L50,100 Q40,96 30,100 Z" Fill="#FFF7EFD8" Stroke="#FF1F6B45" StrokeThickness="1.4" StrokeLineJoin="Round" />
+                        <Path Data="M50,84 Q60,80 70,84 L70,100 Q60,96 50,100 Z" Fill="#FFFBF5E3" Stroke="#FF1F6B45" StrokeThickness="1.4" StrokeLineJoin="Round" />
+                        <Line X1="50" Y1="84" X2="50" Y2="100" Stroke="#FF1F6B45" StrokeThickness="1" />
+                        <Path Data="M33,87.5 Q40,85.5 47,87.5 M33,91 Q40,89 47,91 M33,94.5 Q40,92.5 47,94.5 M53,87.5 Q60,85.5 67,87.5 M53,91 Q60,89 67,91 M53,94.5 Q60,92.5 67,94.5"
+                              Stroke="#FF8A6A2F" StrokeThickness="0.7" Opacity="0.8" />
+                        <Ellipse Canvas.Left="27" Canvas.Top="90" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        <Ellipse Canvas.Left="65" Canvas.Top="90" Width="8" Height="8" Fill="{StaticResource Skin}" />
+                        <Path Data="M77,70 L78.5,73.5 L82,75 L78.5,76.5 L77,80 L75.5,76.5 L72,75 L75.5,73.5 Z" Fill="#FFE6C476" />
+                    </Canvas>
+                </Canvas>
+            </Viewbox>
+        </Canvas>
+
+        <!-- Quiet local-time accents; these remain static in reduced-motion modes. -->
+        <Canvas x:Name="MorningMug" Canvas.Left="119" Canvas.Top="140" Width="15" Height="14" Visibility="Collapsed" IsHitTestVisible="False">
+            <Rectangle Canvas.Left="2" Canvas.Top="4" Width="9" Height="8" RadiusX="1.5" RadiusY="1.5" Fill="#FFF3E2" Stroke="#FF8B5E3C" StrokeThickness="1" />
+            <Path Data="M11,6 C15,5 15,11 11,10" Stroke="#FF8B5E3C" StrokeThickness="1.2" />
+            <Path Data="M4,2 C2,0 5,0 4,0 M8,2 C6,0 9,0 8,0" Stroke="#FFB98054" StrokeThickness="0.8" StrokeStartLineCap="Round" />
+        </Canvas>
+        <Canvas x:Name="EveningBook" Canvas.Left="13" Canvas.Top="144" Width="17" Height="12" Visibility="Collapsed" IsHitTestVisible="False">
+            <Path Data="M0,2 Q4,0 8.5,2 L8.5,11 Q4,9 0,11 Z" Fill="#FFFFE6B8" Stroke="#FF72513D" StrokeThickness="0.8" />
+            <Path Data="M8.5,2 Q13,0 17,2 L17,11 Q13,9 8.5,11 Z" Fill="#FFFFF2D8" Stroke="#FF72513D" StrokeThickness="0.8" />
+            <Line X1="8.5" Y1="2" X2="8.5" Y2="11" Stroke="#FF9A6B4D" StrokeThickness="0.8" />
+        </Canvas>
+
+        <!-- ===== the time, large, on top ===== -->
+        <Grid Canvas.Left="0" Canvas.Top="1" Width="150">
+            <Border x:Name="ClockPlate" Style="{StaticResource Plate}">
+                <TextBlock x:Name="ClockTime" Style="{StaticResource Label}" FontSize="17" FontWeight="Bold" Text="--:--" />
+            </Border>
+        </Grid>
+
+        <!-- ===== the date, the Hijri date and the next prayer, under the avatar ===== -->
+        <StackPanel Canvas.Left="0" Canvas.Top="172" Width="150">
+            <Border Style="{StaticResource Plate}">
+                <TextBlock x:Name="ClockDate" Style="{StaticResource Label}" FontSize="11.5" FontWeight="Bold" />
+            </Border>
+            <Border x:Name="HijriPlate" Style="{StaticResource Plate}" Margin="0,2,0,0">
+                <TextBlock x:Name="HijriDate" Style="{StaticResource Label}" FontSize="10.5" FontWeight="SemiBold" Foreground="#FFF3D78B" />
+            </Border>
+            <Border x:Name="NextPrayerPlate" Style="{StaticResource Plate}" Margin="0,2,0,0" Visibility="Collapsed">
+                <TextBlock x:Name="NextPrayer" Style="{StaticResource Label}" FontSize="10.5" FontWeight="SemiBold" />
+            </Border>
+        </StackPanel>
+
+        <!-- ===== icon bar — must stay in sync with MainWindow's IconRects ===== -->
+        <Border Canvas.Left="20" Canvas.Top="229" Width="110" Height="24" CornerRadius="7" Background="#C0141010" />
+        <StackPanel x:Name="MediaBar" Canvas.Left="20" Canvas.Top="230" Width="110" Height="22" Orientation="Horizontal">
+            <Grid x:Name="IconPrayer" Style="{StaticResource MediaIcon}" Margin="4.5,0,1.5,0"><TextBlock Style="{StaticResource IconGlyph}" Text="🕌" /></Grid>
+            <Grid x:Name="IconQuran" Style="{StaticResource MediaIcon}"><TextBlock Style="{StaticResource IconGlyph}" Text="📗" /></Grid>
+            <Grid x:Name="IconReminders" Style="{StaticResource MediaIcon}"><TextBlock Style="{StaticResource IconGlyph}" Text="⏰" /></Grid>
+            <Grid x:Name="IconMic" Style="{StaticResource MediaIcon}"><TextBlock x:Name="MicGlyph" Style="{StaticResource IconGlyph}" Text="🎤" /></Grid>
+        </StackPanel>
+
+        <!-- ===== the message label (reminders, prayer times, voice
+             replies) — CloseLabelRect must stay in sync with its ✕ ===== -->
+        <Canvas x:Name="NowPlaying" Visibility="Collapsed">
+            <Rectangle Canvas.Left="3" Canvas.Top="255" Width="144" Height="36" RadiusX="9" RadiusY="9" Fill="#E0141010" />
+                <TextBlock x:Name="NowPlayingNote" Canvas.Left="8" Canvas.Top="259.5" Text="🔔" FontFamily="Segoe UI Emoji" FontSize="9.5"
+                       Foreground="{StaticResource WhiteText}" Opacity="0.85" />
+            <Canvas x:Name="TitleLine" Canvas.Left="25" Canvas.Top="259" Width="99" Height="13.75" ClipToBounds="True">
+                <Canvas.OpacityMask>
+                    <LinearGradientBrush x:Name="TitleMask" StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0" Color="Transparent" />
+                        <GradientStop Offset="0.062" Color="Black" />
+                        <GradientStop Offset="0.938" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Canvas.OpacityMask>
+                <TextBlock x:Name="NowPlayingTitle" Canvas.Top="-0.45" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource WhiteText}">
+                    <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                </TextBlock>
+            </Canvas>
+            <Canvas x:Name="SubtitleLine" Canvas.Left="25" Canvas.Top="275.75" Width="99" Height="11.9" ClipToBounds="True">
+                <Canvas.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0" Color="Transparent" />
+                        <GradientStop Offset="0.062" Color="Black" />
+                        <GradientStop Offset="0.938" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Canvas.OpacityMask>
+                <TextBlock x:Name="NowPlayingSubtitle" Canvas.Top="-0.38" FontFamily="Segoe UI" FontSize="9.5"
+                           Foreground="{StaticResource WhiteText}" Opacity="0.8">
+                    <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                </TextBlock>
+            </Canvas>
+
+            <TextBlock Canvas.Left="130" Canvas.Top="258.4" Text="✕" FontFamily="Segoe UI Symbol" FontSize="10"
+                       Foreground="{StaticResource WhiteText}" Opacity="0.8" />
+        </Canvas>
+    </Canvas>
+</UserControl>
