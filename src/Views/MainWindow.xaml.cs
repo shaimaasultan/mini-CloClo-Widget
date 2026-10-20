@@ -94,6 +94,9 @@ public partial class MainWindow : Window
             _closing = true;
             CancelShutdownCountdown();
             UpdatePushToTalkHook(); // closing: removes the mouse watcher
+            // Frees the speech model (at once, or when a command still being
+            // decoded finishes with it).
+            LocalAudioTranscriber.UnloadModel();
             UnregisterHotkeys();
             Keeper.SetVoiceStatus("off");
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -157,6 +160,9 @@ public partial class MainWindow : Window
         UpdateNextPrayer();
 
         UpdateActivityState();
+        // The speech model loads in the background now, so the first voice
+        // command starts listening at once; it stays loaded until exit.
+        _ = System.Threading.Tasks.Task.Run(LocalAudioTranscriber.PreloadModelAsync);
         if (_settings.SpeakGreeting)
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(SpeakGreeting));
     }
@@ -250,10 +256,10 @@ public partial class MainWindow : Window
         var talk = _settings.PushToTalkEnabled ? "Hold the right mouse button anywhere for a second" : "Press Control Alt V";
         var talkArabic = _settings.PushToTalkEnabled ? "دوس كليك يمين مطول في أي مكان" : "دوس كنترول ألت V";
         ShowLabel("Help", "Say: time, date, next prayer, Quran, reminders, stop", "❔");
-        Voice.Say($"{talk}, wait for Listening, then say a command: what time is it, the date, next prayer, prayer times, " +
+        Voice.Say($"{talk}, wait for the short chime, then say a command: what time is it, the date, next prayer, prayer times, " +
                   "Quran, next, previous, reminders, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
                   "or shut down." + keys,
-            $"{talkArabic}، استنى لما أقول أنا سامعك، وبعدين قول أمر: الساعة كام، التاريخ، الصلاة الجاية، مواقيت الصلاة، " +
+            $"{talkArabic}، استنى صوت التنبيه القصير، وبعدين قول أمر: الساعة كام، التاريخ، الصلاة الجاية، مواقيت الصلاة، " +
             "القرآن، اللي بعده، اللي قبله، التذكيرات، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
             "أو اقفل الجهاز." + keysArabic);
     }

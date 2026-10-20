@@ -43,7 +43,7 @@ commands and replies in Arabic*.
 ## Talking to it
 
 Hold the **right mouse button anywhere for a second** (or press
-**Ctrl+Alt+V**, or click the 🎤 icon), wait for "Listening", say a command and
+**Ctrl+Alt+V**, or click the 🎤 icon), wait for the short rising chime (the 🎤 badge turns blue), say a command and
 let go (press Ctrl+Alt+V again). A short right-click still works as usual.
 
 | Say | It does |

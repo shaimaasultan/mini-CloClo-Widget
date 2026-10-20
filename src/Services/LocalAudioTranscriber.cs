@@ -60,7 +60,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
     private long _lastProgressBytes;
     private int _recognizedPhrases;
     private int _finishing;
-    // While CloClo speaks during a voice command ("Listening."), captured
+    // While CloClo plays its "speak now" chime during a voice command, captured
     // bytes are replaced with silence before they enter the queue, so its
     // own voice can't become part of the command.
     private int _voiceRecognitionMode; // 0 = listening, 1 = silent
@@ -134,7 +134,8 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         {
             EnsureNativeRuntimeLoaded();
             var arabic = languageTag.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
-            using var factory = await CreateFactoryAsync();
+            var factory = await WarmModel.AcquireAsync(this);
+            using var lease = new WarmModel.Lease();
             Volatile.Write(ref _engine, "base model on the CPU");
             var builder = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
                 .WithThreads(WhisperThreads.Value);
@@ -446,6 +447,107 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
             throw new InvalidOperationException("CloClo doesn't hold the single-instance lock, so it can't load a speech model.");
         var modelBytes = await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, _stop.Token);
         return WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
+    }
+
+    // Loads the speech model ahead of the first command (at startup) and
+    // keeps it loaded until UnloadModel, so a command starts listening at
+    // once. Failures are ignored here; a command reports them itself.
+    public static async Task PreloadModelAsync()
+    {
+        try
+        {
+            await using var session = new LocalAudioTranscriber(AudioCaptureSource.Microphone, recognitionPrompt: "");
+            EnsureNativeRuntimeLoaded();
+            await WarmModel.AcquireAsync(session, keepLoaded: true);
+            new WarmModel.Lease().Dispose();
+        }
+        catch
+        {
+            // No model, no AVX2 or the single-instance lock is gone: the
+            // first command loads (and explains) as before.
+        }
+    }
+
+    // At exit: frees the model now, or as soon as a command still being
+    // decoded lets go of it. Nothing loads it again afterwards.
+    public static void UnloadModel() => WarmModel.Unload();
+
+    // The model stays loaded - for IdleTime after the last command, or for
+    // good once preloaded - so the next command starts listening at once
+    // instead of reading and checking 141 MB from disk first. Each session
+    // builds its own processor from it.
+    private static class WarmModel
+    {
+        private static readonly TimeSpan IdleTime = TimeSpan.FromMinutes(5);
+        private static readonly SemaphoreSlim Gate = new(1, 1);
+        private static WhisperFactory? factory;
+        private static int users;
+        private static long generation;
+        private static bool keep;
+        private static bool closed;
+
+        public static async Task<WhisperFactory> AcquireAsync(LocalAudioTranscriber session, bool keepLoaded = false)
+        {
+            await Gate.WaitAsync(session._stop.Token);
+            try
+            {
+                if (closed) throw new OperationCanceledException("Mini CloClo is closing.");
+                if (keepLoaded) keep = true;
+                factory ??= await session.CreateFactoryAsync();
+                users++;
+                generation++;
+                return factory;
+            }
+            finally { Gate.Release(); }
+        }
+
+        // Disposing it hands the model back (and starts the idle countdown).
+        public sealed class Lease : IDisposable
+        {
+            public void Dispose()
+            {
+                long released;
+                Gate.Wait();
+                try
+                {
+                    users--;
+                    released = ++generation;
+                    if (closed && users == 0) DisposeFactory();
+                }
+                finally { Gate.Release(); }
+                if (!keep) _ = UnloadWhenIdleAsync(released);
+            }
+        }
+
+        public static void Unload()
+        {
+            Gate.Wait();
+            try
+            {
+                closed = true;
+                if (users == 0) DisposeFactory();
+            }
+            finally { Gate.Release(); }
+        }
+
+        private static async Task UnloadWhenIdleAsync(long released)
+        {
+            await Task.Delay(IdleTime);
+            await Gate.WaitAsync();
+            try
+            {
+                if (users != 0 || generation != released || keep) return;
+                DisposeFactory();
+            }
+            finally { Gate.Release(); }
+        }
+
+        // Called with Gate held.
+        private static void DisposeFactory()
+        {
+            factory?.Dispose();
+            factory = null;
+        }
     }
 
     // One thread per physical core. Whisper defaults to every logical

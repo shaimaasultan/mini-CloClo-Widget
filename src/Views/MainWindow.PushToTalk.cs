@@ -133,10 +133,11 @@ public partial class MainWindow
                 ShowLabel("Listening", fromKeyboard
                     ? "Say a command, like \"what time is it\". Press again when done."
                     : "Say a command, like \"what time is it\", then release.", "🎤");
-                // The microphone hears silence while CloClo says it, so the
-                // cue can't become part of the command.
+                // A short chime is the cue to speak (the blue badge can't be
+                // seen by everyone). The microphone hears silence while it
+                // plays, so the chime can't become part of the command.
                 session.PauseVoiceRecognition();
-                await SpeakPushToTalkStepAsync("Listening.", "أنا سامعك.");
+                await Earcon.ListeningAsync();
                 if (_pushToTalk == session && _pushToTalkHeld)
                 {
                     session.ResumeVoiceRecognition();
