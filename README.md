@@ -5,7 +5,8 @@ someone who can't see the screen well. It keeps only:
 
 - **Voice commands** — talk to it instead of looking for it.
 - **Custom reminders** — spoken out loud.
-- **Prayer times and azan** — announced out loud, with an optional azan recording.
+- **Prayer times and azan** — announced out loud, then the azan (a built-in
+  recording, or your own).
 - **Quran memorization** — recitation on a loop, controlled by keyboard or voice.
 - **The avatar**, which changes with what's happening (prayer clothes, reading
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
@@ -31,8 +32,8 @@ it carries its own runtime.
 
 **First thing to set:** your city, for the prayer times. Say "prayer times"
 or press Ctrl+Alt+M → *Prayer times and azan…* and pick it from the list (or
-choose *Another place* and type its latitude and longitude). The default is
-Cairo.
+choose *Another place* and type its latitude and longitude). On first run it
+picks a listed city in the PC's time zone, or Cairo.
 
 **Speech voices:** replies use Windows' own voices. English works out of the
 box. For Arabic replies, add the Arabic speech pack in **Settings → Time &
@@ -92,8 +93,9 @@ English meaning. Every button also has an Alt access key.
 
 - **Prayer times** are worked out on the PC (Egyptian, Umm al-Qura, Muslim
   World League, Karachi or ISNA; Standard or Hanafi Asr). At each prayer it
-  says "It's time for the Asr prayer", plays your azan recording if you chose
-  one, and the avatar changes into prayer clothes on a prayer mat until you
+  says "It's time for the Asr prayer", then plays the azan — the built-in
+  recording from `Assets\Azan` (Aaqib Azeez), or one of your own chosen with
+  *Choose azan audio…* (*Use built-in* goes back) — and the avatar changes into prayer clothes on a prayer mat until you
   say "I prayed" (or click the green check or the head). It can also warn you
   5–30 minutes before each prayer (10 by default).
 - **Custom reminders** (up to 10): a message, how often (15 minutes to 4
@@ -107,7 +109,9 @@ English meaning. Every button also has an Alt access key.
 
 ## The widget
 
-The time sits on top, large; below the avatar are the date, the Hijri date
+The time sits on top, large, with the sun by day and the moon at night: from
+sunrise and sunset in your city when it's in the PC's time zone, otherwise
+6 AM to 6 PM by the PC's clock. Below the avatar are the date, the Hijri date
 and the next prayer, each on a dark plate that reads on any wallpaper. Under
 them, four icons: 🕌 prayer times, 📗 Quran, ⏰ reminders, 🎤 talk. Click the
 head to hear the time; drag to move it; right-click or double-click for the

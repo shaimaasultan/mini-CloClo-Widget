@@ -68,6 +68,19 @@ public static class PrayerTimesCalculator
         return result;
     }
 
+    // Sunrise and sunset on that date, or null where the sun doesn't rise or
+    // set (polar day or night).
+    public static (DateTimeOffset Sunrise, DateTimeOffset Sunset)? SunTimes(DateTime date, double latitude, double longitude)
+    {
+        if (!double.IsFinite(latitude) || !double.IsFinite(longitude) ||
+            Math.Abs(latitude) > 90 || Math.Abs(longitude) > 180) return null;
+        var utcDay = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        var sunrise = SolarEvent(utcDay, latitude, longitude, -0.833, morning: true);
+        var sunset = SolarEvent(utcDay, latitude, longitude, -0.833, morning: false);
+        if (sunrise is null || sunset is null) return null;
+        return (new DateTimeOffset(sunrise.Value, TimeSpan.Zero), new DateTimeOffset(sunset.Value, TimeSpan.Zero));
+    }
+
     private static void Add(List<PrayerOccurrence> prayers, string name, DateTime? utc)
     {
         if (utc is { } time)

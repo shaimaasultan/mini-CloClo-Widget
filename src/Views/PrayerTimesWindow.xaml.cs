@@ -183,8 +183,24 @@ public partial class PrayerTimesWindow : Window
                             "Compare them with your local mosque.";
     }
 
-    private void UpdateAudioLabel() => AudioFileText.Text =
-        _audioPath is null ? "No azan recording chosen — the prayer time is spoken instead" : Path.GetFileName(_audioPath);
+    // Which azan will play: the chosen file, else the built-in one.
+    private void UpdateAudioLabel()
+    {
+        var builtIn = AzanLibrary.Default;
+        AudioFileText.Text = LocalAudioPlayer.IsPlayable(_audioPath) ? Path.GetFileName(_audioPath)
+            : builtIn != null ? $"Built-in: {AzanLibrary.DisplayName(builtIn)}"
+            : "No azan recording — the prayer time is spoken instead";
+        BuiltInButton.IsEnabled = _audioPath != null && builtIn != null;
+    }
+
+    private void UseBuiltIn_Click(object sender, RoutedEventArgs e)
+    {
+        _audioPath = null;
+        UpdateAudioLabel();
+        StatusText.Text = AzanLibrary.Default is { } builtIn
+            ? $"The built-in azan, {AzanLibrary.DisplayName(builtIn)}, will play."
+            : "There is no built-in azan recording.";
+    }
 
     private void ChooseAudio_Click(object sender, RoutedEventArgs e)
     {
@@ -216,7 +232,7 @@ public partial class PrayerTimesWindow : Window
             StatusText.Text = "Preview stopped.";
             return;
         }
-        var playing = _preview.TryPlay(_audioPath);
+        var playing = _preview.TryPlay(AzanLibrary.Effective(_audioPath));
         PreviewButton.Content = playing ? "Stop pre_view" : "Pre_view";
         StatusText.Text = playing
             ? "Playing the azan. Press Preview again to stop."
@@ -252,7 +268,7 @@ public partial class PrayerTimesWindow : Window
             Latitude = latitude;
             Longitude = longitude;
         }
-        if (AzanEnabled && !LocalAudioPlayer.IsPlayable(_audioPath))
+        if (AzanEnabled && AzanLibrary.Effective(_audioPath) == null)
         {
             StatusText.Text = "Choose a readable MP3 or WAV azan recording (up to 30 MB) before turning the azan on.";
             return;

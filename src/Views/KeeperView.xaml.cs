@@ -111,8 +111,8 @@ public partial class KeeperView : System.Windows.Controls.UserControl
         UpdateClock();
     }
 
-    // Night from Maghrib to Fajr, when the host knows the prayer times;
-    // otherwise by the clock (6 PM to 6 AM).
+    // Night from sunset to sunrise in the chosen city, as the host works it
+    // out; otherwise (null) by the clock, 6 PM to 6 AM.
     public void SetNight(bool? night)
     {
         _isNightOverride = night;

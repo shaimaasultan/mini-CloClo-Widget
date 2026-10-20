@@ -64,6 +64,10 @@ internal static class Snapshot
             var times = PrayerTimesCalculator.ForDate(date, city.Latitude, city.Longitude, city.Method, "standard");
             lines.Add($"{city.Name} ({city.Method}, {zone.Id}): " + string.Join("  ",
                 times.Select(p => $"{p.Name} {TimeZoneInfo.ConvertTime(p.StartsAtUtc, zone):HH:mm}")));
+            if (PrayerTimesCalculator.SunTimes(date, city.Latitude, city.Longitude) is { } sun)
+                lines.Add($"    sunrise {TimeZoneInfo.ConvertTime(sun.Sunrise, zone):HH:mm}, sunset {TimeZoneInfo.ConvertTime(sun.Sunset, zone):HH:mm}, " +
+                          $"now {TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone):HH:mm} -> {(DateTimeOffset.UtcNow < sun.Sunrise || DateTimeOffset.UtcNow >= sun.Sunset ? "moon" : "sun")}");
+            lines.Add($"    azan: {AzanLibrary.Default ?? "(none)"}");
         }
         File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
         return 0;

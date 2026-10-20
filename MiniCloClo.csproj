@@ -51,6 +51,10 @@
     <Content Include="Assets\Models\ggml-base.bin" Link="ggml-base.bin"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Remove="Assets\Recitations\**" />
+    <!-- The built-in azan recordings, in an Azan folder beside the exe
+         (AzanLibrary). Any MP3 or WAV put in Assets\Azan is included. -->
+    <Content Include="Assets\Azan\*.mp3;Assets\Azan\*.wav" Link="Azan\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="VerifyBundledWhisperModel" BeforeTargets="CoreCompile">

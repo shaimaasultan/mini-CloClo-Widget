@@ -321,9 +321,16 @@ public partial class MainWindow : Window
                 $"Next prayer {n.Name} at {SpokenTime.English(at)}, in {SpokenTime.DurationEnglish(n.StartsAtUtc - now)}");
         }
         else Keeper.SetNextPrayer(null, null);
-        // Night from Maghrib until Fajr.
-        var last = PrayersAround(1).Where(p => p.StartsAtUtc <= now).OrderBy(p => p.StartsAtUtc).Cast<PrayerOccurrence?>().LastOrDefault();
-        Keeper.SetNight(last is { } l ? l.Name is "Maghrib" or "Isha" : null);
+        // The sky follows the clock shown on the widget, the PC's own: the
+        // moon from sunset, the sun from sunrise, using the chosen city's
+        // sunrise and sunset when it's in the PC's time zone. Otherwise the
+        // city's sky would be the wrong one for the PC's time, so the widget
+        // falls back to 6 AM - 6 PM by the PC's clock (null).
+        var sameZone = zone.GetUtcOffset(now) == TimeZoneInfo.Local.GetUtcOffset(now);
+        var sun = sameZone
+            ? PrayerTimesCalculator.SunTimes(PrayerTimeZone.Today(_settings.LocationTimeZoneId), _settings.Latitude, _settings.Longitude)
+            : null;
+        Keeper.SetNight(sun is { } s ? now < s.Sunrise || now >= s.Sunset : null);
     }
 
     private void PrayerTimer_Tick(object? sender, EventArgs e)
@@ -374,8 +381,8 @@ public partial class MainWindow : Window
             UpdateActivityState();
         }
         ShowLabel($"{prayer.Name} prayer time", _settings.City, "🕌", seconds: 60);
-        var azan = _settings.PrayerAzanEnabled && LocalAudioPlayer.IsPlayable(_settings.PrayerAzanAudioPath);
-        if (azan)
+        var azan = _settings.PrayerAzanEnabled ? AzanLibrary.Effective(_settings.PrayerAzanAudioPath) : null;
+        if (azan != null)
         {
             _reminderAudioPlayer?.Stop();
             _reminderSpeechAfterAudio = null;
@@ -389,22 +396,22 @@ public partial class MainWindow : Window
             if (_settings.PrayerAnnounce)
             {
                 // Said first, then the azan follows.
-                _ = AnnounceThenAzanAsync(prayer);
+                _ = AnnounceThenAzanAsync(prayer, azan);
                 return;
             }
-            if (_azanPlayer.TryPlay(_settings.PrayerAzanAudioPath)) PauseVoiceForAudio();
+            if (_azanPlayer.TryPlay(azan)) PauseVoiceForAudio();
             return;
         }
         if (_settings.PrayerAnnounce) SayPrayerArrived(prayer);
     }
 
-    private async System.Threading.Tasks.Task AnnounceThenAzanAsync(PrayerOccurrence prayer)
+    private async System.Threading.Tasks.Task AnnounceThenAzanAsync(PrayerOccurrence prayer, string azan)
     {
         PauseVoiceForAudio();
         var (english, arabic) = PrayerArrivedText(prayer);
         await Voice.SayAndWaitAsync(english, arabic, TimeSpan.FromSeconds(10));
         if (_closing || _azanPlayer == null) return;
-        if (!_azanPlayer.TryPlay(_settings.PrayerAzanAudioPath)) ResumeVoiceAfterAudio();
+        if (!_azanPlayer.TryPlay(azan)) ResumeVoiceAfterAudio();
     }
 
     private (string English, string Arabic) PrayerArrivedText(PrayerOccurrence prayer) =>

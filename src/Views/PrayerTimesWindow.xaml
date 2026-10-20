@@ -76,6 +76,7 @@
         <CheckBox x:Name="EnableAzanBox" Content="Play the a_zan recording at prayer times" Margin="0,0,0,8" />
         <DockPanel Margin="0,0,0,6">
             <Button Content="C_hoose azan audio…" Click="ChooseAudio_Click" DockPanel.Dock="Left" Padding="10,5" />
+            <Button x:Name="BuiltInButton" Content="Use bu_ilt-in" Click="UseBuiltIn_Click" DockPanel.Dock="Left" Padding="10,5" Margin="8,0,0,0" />
             <Button x:Name="PreviewButton" Content="Pre_view" Click="Preview_Click" DockPanel.Dock="Right" Padding="10,5" Margin="8,0,0,0" />
             <TextBlock x:Name="AudioFileText" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
         </DockPanel>

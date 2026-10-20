@@ -34,9 +34,9 @@ public class WidgetSettings
     public List<CustomReminderSettings> CustomReminders { get; set; } = new();
     public string PrayerCalculationMethod { get; set; } = "egyptian";
     public string PrayerAsrMethod { get; set; } = "standard";
-    // The azan is a local MP3/WAV the person chooses; without one, the prayer
-    // time is still spoken (PrayerAnnounce).
-    public bool PrayerAzanEnabled { get; set; }
+    // The azan plays at each prayer time: the person's own MP3/WAV if one is
+    // chosen, otherwise the built-in recording (AzanLibrary).
+    public bool PrayerAzanEnabled { get; set; } = true;
     public string? PrayerAzanAudioPath { get; set; }
     // Says "It's time for the Asr prayer" at each prayer time.
     public bool PrayerAnnounce { get; set; } = true;
@@ -86,7 +86,24 @@ public class WidgetSettings
         {
             // Corrupt or unreadable settings file: fall back to defaults below.
         }
-        return new WidgetSettings();
+        return ForThisPc();
+    }
+
+    // First run: the first listed city in the PC's own time zone (Windows'
+    // setting, not its location), so prayer times and the sky match the
+    // clock from the start. Cairo when none is listed.
+    private static WidgetSettings ForThisPc()
+    {
+        var settings = new WidgetSettings();
+        if (OfflineCities.All.FirstOrDefault(c => c.TimeZoneId == TimeZoneInfo.Local.Id) is { } city)
+        {
+            settings.City = city.Name;
+            settings.Latitude = city.Latitude;
+            settings.Longitude = city.Longitude;
+            settings.LocationTimeZoneId = city.TimeZoneId;
+            settings.PrayerCalculationMethod = city.Method;
+        }
+        return settings;
     }
 
     private static byte[] ReadSettingsBytes()
