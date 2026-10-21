@@ -252,8 +252,8 @@ internal static class Snapshot
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
             ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
-            ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
-            ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("كلها", true), ("السورة كلها", true),
+            ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("No.", false), ("Go back.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
+            ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
             ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
             ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
@@ -295,6 +295,9 @@ internal static class Snapshot
                      "من الآية ٣", "لحد ٥", "كلها", "السورة كلها", "للآخر",
                      "1.4.", "واحد 4.", "From 3 to 5.", "الفاتحة. حدوه.", "Won tree.", "One, seven.", "2, 3, 4.", "واحد سلاسة جن.", "واحد سبات.", "واحد سباتن.", "اتنين تلاته اربعه", "حدوه", "جن", "Den.", "Forteen.", "Fiftin.", "Sixdeen.", "Twendy.", "One four.", "Two, eight, six.", "Seven.", "سبأ", "سبع", "Al-Fadiha.", "Al-Bakira.", "Surah Yawson.", "سلاسة جن.", "قوليها.", "Choosa sura.", "اخطار سورة.", "Quran surah.", "Quran, surah.", "Koran Sura.", "القرآن سورة", "القرآن وصورة جن.", "Quran.", "القرآن" })
             lines.Add($"\"{heard}\" -> surah {QuranVoiceAnswers.Surah(heard)?.ToString() ?? "-"}, number {QuranVoiceAnswers.Number(heard)?.ToString() ?? "-"}, all {QuranVoiceAnswers.IsAll(heard)}, end {QuranVoiceAnswers.IsEnd(heard)}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
+        foreach (var heard in new[] { "No.", "No, no.", "Go back.", "Back.", "Wrong.", "No, that's wrong.", "لا", "لأ.", "ارجع", "غلط", "لا غلط.",
+                     "No, five.", "Cancel.", "Stop.", "Not now." })
+            lines.Add($"\"{heard}\" -> back {QuranVoiceAnswers.IsBack(heard)}, cancel {ApprovedVoiceAppLauncher.IsCancelCommand(heard)}, number {QuranVoiceAnswers.Number(heard)?.ToString() ?? "-"}");
         lines.Add("-- transcripts as Whisper writes them --");
         foreach (var heard in new[] { "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
                      "No, don't call.", "Cancel.", "Yes. No.", "Calcia.", "Call sho.", "Callsho." })

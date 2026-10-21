@@ -224,8 +224,10 @@ reliably; Arabic is weaker with the small speech model, so the window
   ("tree" for three, "سبات" for سبعة), so other speech is asked again rather
   than guessed at. "14" said whole still works when it is heard right.
 
-  An unclear answer is asked again (the label shows what was heard), and
-  "cancel" stops the questions. The menu has *Choose a surah by voice…*, and
+  An unclear answer is asked again (the label shows what was heard). If
+  Keeper reads back the wrong surah or ayah, say **"no"** (or "back", "لا",
+  "ارجع") to go back one question and answer it again — at the first
+  question, "no" stops. "Cancel" stops the questions at any time. The menu has *Choose a surah by voice…*, and
   Shift+Q starts it when the widget has focus.
 
   <img src="docs/screenshots/quran.png" alt="Quran memorization window on Al-Fatiha, ayah 2, in large Uthmani script with its English meaning, Show English ticked, Previous, Repeat and Memorized - next ayah buttons, a progress bar showing 1 of 7 ayat memorized, and the installed Alafasy recitations" width="480">

@@ -78,6 +78,16 @@ internal static class QuranVoiceAnswers
             .Any(a => ApprovedVoiceAppLauncher.SoundKey(a) == key);
     }
 
+    // "No" to what Keeper read back: go back one question.
+    private static readonly string[] BackPhrases =
+    [
+        "no", "nope", "no no", "back", "go back", "wrong", "that s wrong", "no that s wrong", "no wrong", "not that", "no go back",
+        "لا", "لأ", "لا لا", "ارجع", "رجوع", "غلط", "لا غلط", "مش كده", "لا مش كده", "لا ارجع",
+    ];
+
+    internal static bool IsBack(string transcript) =>
+        Array.IndexOf(BackPhrases, ApprovedVoiceAppLauncher.CommandPhrase(transcript.Length > 160 ? "" : transcript)) >= 0;
+
     internal static bool IsEnd(string transcript)
     {
         var phrase = Phrase(transcript);
@@ -261,9 +271,9 @@ internal static class QuranVoiceAnswers
     // The recognizer's hint while a question waits: numbers written as
     // digits steer Whisper to write "14" rather than a sound-alike word.
     internal const string RecognitionPrompt =
-        "Surah 2. Al-Fatiha. Al-Baqara. Yasin. From ayah 1, 4. One, seven. 2, 3, 4. 10. 25. 286. All. To the end. Cancel.";
+        "Surah 2. Al-Fatiha. Al-Baqara. Yasin. From ayah 1, 4. One, seven. 2, 3, 4. 10. 25. 286. All. To the end. No. Go back. Cancel.";
     internal const string ArabicRecognitionPrompt =
-        "سورة 2. الفاتحة. البقرة. يس. من الآية واحد، أربعة. 1، 7. 2، 3، 4. 10. 25. 286. كلها. للآخر. إلغاء.";
+        "سورة 2. الفاتحة. البقرة. يس. من الآية واحد، أربعة. 1، 7. 2، 3، 4. 10. 25. 286. كلها. للآخر. لا. ارجع. إلغاء.";
 
     private static string Phrase(string transcript) =>
         transcript.Length > 160 ? "" : ApprovedVoiceAppLauncher.CommandPhrase(transcript);

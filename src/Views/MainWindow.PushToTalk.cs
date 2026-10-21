@@ -194,6 +194,9 @@ public partial class MainWindow
         }
         // "Yes" to a "call Mom?" question.
         if (!_shutdownAwaitingClose && TryConfirmPendingCall(heard)) return;
+        // "No" / "back" to what Keeper read back during the surah questions -
+        // before "no" is taken as cancel and "back" as "previous ayah".
+        if (!_shutdownAwaitingClose && _pendingCall == null && await TryGoBackInQuranDialogAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsCancelCommand(heard))
         {
             if (await CancelShutdownByUserAsync()) return;

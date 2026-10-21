@@ -8,9 +8,10 @@ namespace MiniCloClo;
 // which ayah? - a number, or "all" for the whole surah, recited from the
 // first ayah to the last and again. (3) To which ayah? - a number, or "the
 // end". Each answer is its own hold-to-talk (or Ctrl+Alt+V), like confirming
-// a call: an unclear answer asks again, "cancel" stops, and after a minute
-// without an answer the questions end. Plain "Quran" still just opens the
-// window where you left off.
+// a call: an unclear answer asks again, "no" goes back one question (to
+// change what Keeper read back), "cancel" stops, and after a minute without
+// an answer the questions end. Plain "Quran" still just opens the window
+// where you left off.
 public partial class MainWindow
 {
     private enum QuranQuestion { None, Surah, From, To }
@@ -47,13 +48,14 @@ public partial class MainWindow
             QuranQuestion.Surah => ("Which surah? Say its name, or its number digit by digit.", "أنهي سورة؟ قول اسمها، أو رقمها رقم رقم.", "Which surah?"),
             QuranQuestion.From => ("From which ayah? Say it digit by digit, like one four for 14. Or say all, for the whole surah.",
                 "من أنهي آية؟ قولها رقم رقم، زي واحد أربعة يعني أربعتاشر. أو قول كلها، للسورة كلها.", "From which ayah? (or \"all\")"),
-            _ => ("To which ayah? Digit by digit.", "لحد أنهي آية؟ رقم رقم.", "To which ayah?"),
+            _ => ("To which ayah? Digit by digit. Or say no, to change the start.",
+                "لحد أنهي آية؟ رقم رقم. أو قول لا، عشان تغير البداية.", "To which ayah?"),
         };
         var surahName = _quranDialogSurah > 0 ? QuranText.GetSurah(_quranDialogSurah).Name : "Quran";
         // What was heard is shown, never spoken: only fixed phrases are said.
         var subtitle = heard != null ? $"Heard: {heard}"
             : question == QuranQuestion.Surah ? "Say a name, or a number digit by digit — or cancel"
-            : $"{surahName} · digit by digit: \"one four\" is 14";
+            : $"{surahName} · digit by digit: \"one four\" is 14 · \"no\" goes back";
         ShowLabel(label, subtitle, "📗", seconds: (int)QuranAnswerTime.TotalSeconds);
         if (before is { } note) (english, arabic) = ($"{note.English} {english}", $"{note.Arabic} {arabic}");
         await SpeakPushToTalkStepAsync(english, arabic);
@@ -153,6 +155,24 @@ public partial class MainWindow
                 return true;
             }
         }
+    }
+
+    // "No" (or "back", "ارجع") while the second or third question waits:
+    // asks the one before again, so a misheard surah or start ayah can be
+    // changed without starting over. At the first question there is
+    // nothing to go back to, so "no" cancels as before.
+    private async Task<bool> TryGoBackInQuranDialogAsync(string heard)
+    {
+        if (!QuranDialogActive || _quranQuestion == QuranQuestion.Surah || !QuranVoiceAnswers.IsBack(heard)) return false;
+        Keeper.SetVoiceStatus("complete");
+        if (_quranQuestion == QuranQuestion.To)
+            await AskQuranAsync(QuranQuestion.From, ("Going back.", "نرجع."));
+        else
+        {
+            _quranDialogSurah = 0;
+            await AskQuranAsync(QuranQuestion.Surah, ("Going back.", "نرجع."));
+        }
+        return true;
     }
 
     // "Cancel" while a question waits: true when there was one.
