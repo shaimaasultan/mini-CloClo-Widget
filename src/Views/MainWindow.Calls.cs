@@ -35,7 +35,10 @@ public partial class MainWindow
     // "Call ..." heard: true when it was a call command (handled here).
     private async Task<bool> TryHandleCallCommandAsync(string heard)
     {
-        if (CallVoiceCommand.TryParse(heard) is not { } spokenName) return false;
+        if (CallVoiceCommand.TryParse(heard, out var joined) is not { } spokenName) return false;
+        // "Calcia" for "Call sho" counts only if it names a contact; otherwise
+        // it's some other word that starts like "call" ("Calculator").
+        if (joined && CallVoiceCommand.Match(spokenName, _settings.Contacts) == null) return false;
         if (_settings.Contacts.Count == 0)
         {
             Keeper.SetVoiceStatus("failed");

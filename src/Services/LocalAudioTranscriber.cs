@@ -630,14 +630,14 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
 #if DEBUG
     // Debug builds only (Snapshot --voice-test): the same command recognizer
     // as a live session, run on audio already in memory (16 kHz mono).
-    internal static async Task<string> TranscribeCommandForTestAsync(float[] samples, bool arabic, string hint = "")
+    internal static async Task<string> TranscribeCommandForTestAsync(float[] samples, bool arabic, string hint = "", string? prompt = null)
     {
         EnsureNativeRuntimeLoaded();
         var modelBytes = await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, CancellationToken.None);
         using var factory = WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
         using var processor = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
             .WithThreads(WhisperThreads.Value)
-            .WithPrompt((arabic ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt : ApprovedVoiceAppLauncher.RecognitionPrompt) + hint)
+            .WithPrompt(prompt ?? (arabic ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt : ApprovedVoiceAppLauncher.RecognitionPrompt) + hint)
             .WithAudioContextSize(arabic ? 1024 : 512)
             .WithSingleSegment()
             .WithMaxTokensPerSegment(32)

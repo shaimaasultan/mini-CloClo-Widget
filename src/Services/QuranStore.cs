@@ -37,8 +37,12 @@ public sealed class QuranStore
     // Memorized ayat, as positions in the whole Quran (0 to 6235).
     public List<int> Memorized { get; set; } = new();
 
-    private static string FolderPath =>
+    private static string FolderPath => FolderOverride ??
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MiniCloClo");
+
+    // Tests and the screenshot tool keep their progress here instead, so
+    // they can never overwrite the person's own. The app never sets it.
+    internal static string? FolderOverride { get; set; }
 
     private static string FilePath => Path.Combine(FolderPath, "quran.json");
 

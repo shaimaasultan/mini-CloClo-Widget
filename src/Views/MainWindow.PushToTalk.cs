@@ -101,10 +101,14 @@ public partial class MainWindow
         if (CloCloSoundPlaying || _voicePausedForAudio || SpeechReader.IsSpeaking) StopSounds();
 
         var arabic = _settings.VoiceCommandsInArabic;
+        // While a choose-a-surah question waits, the hint is surah names and
+        // numbers, so an ayah number comes out as digits.
         var session = new LocalAudioTranscriber(AudioCaptureSource.Microphone,
-            recognitionPrompt: (arabic
-                ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt
-                : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic));
+            recognitionPrompt: QuranDialogActive
+                ? (arabic ? QuranVoiceAnswers.ArabicRecognitionPrompt : QuranVoiceAnswers.RecognitionPrompt)
+                : (arabic
+                    ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt
+                    : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic));
         _pushToTalk = session;
         lock (_pushToTalkText) _pushToTalkText.Clear();
         session.TextRecognized += text =>
@@ -193,7 +197,7 @@ public partial class MainWindow
         if (ApprovedVoiceAppLauncher.IsCancelCommand(heard))
         {
             if (await CancelShutdownByUserAsync()) return;
-            if (CancelPendingCall())
+            if (CancelPendingCall() || CancelQuranDialog())
             {
                 Keeper.SetVoiceStatus("complete");
                 return;
@@ -213,6 +217,8 @@ public partial class MainWindow
             await CloseAppsThenShutDownAsync(force: false);
             return;
         }
+        // An answer to "which surah?" / "from which ayah?" / "to which ayah?".
+        if (await TryHandleQuranAnswerAsync(heard)) return;
         // "Call Mom": read back, then dialed only after "yes".
         if (await TryHandleCallCommandAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsShutdownCommand(heard))
@@ -267,6 +273,7 @@ public partial class MainWindow
             case WidgetVoiceCommand.Quran or WidgetVoiceCommand.QuranNext or WidgetVoiceCommand.QuranPrevious:
                 QuranVoiceCommand(command);
                 break;
+            case WidgetVoiceCommand.ChooseSurah: StartChooseSurah(); break;
             case WidgetVoiceCommand.Reminders: OpenCustomReminders(); break;
             case WidgetVoiceCommand.Help: SayHelp(); break;
             case WidgetVoiceCommand.StopSound:

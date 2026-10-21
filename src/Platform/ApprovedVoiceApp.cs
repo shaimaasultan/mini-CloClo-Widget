@@ -29,7 +29,7 @@ internal static class ApprovedVoiceAppLauncher
     // the wake name or a finish word is tolerated but not needed. The prompt
     // lists only the names, which steers Whisper toward their spelling.
     internal const string RecognitionPrompt =
-        "What time is it? Date. Next prayer. Prayer times. Quran. Reminders. Help. Stop. I prayed. " +
+        "What time is it? Date. Next prayer. Prayer times. Quran. Quran surah. Reminders. Help. Stop. I prayed. " +
         "Notepad. Word. Settings. Calculator. Narrator. Magnifier. Shut down. Close all. Force close. Cancel.";
     internal const string ArabicRecognitionPrompt =
         "الساعة كام؟ التاريخ. الصلاة الجاية. مواقيت الصلاة. القرآن. التذكيرات. مساعدة. اسكت. صليت. " +

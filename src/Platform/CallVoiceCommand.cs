@@ -80,8 +80,14 @@ internal static class CallVoiceCommand
     }
 
     // The name after "call ...", or null when it isn't a call command.
-    internal static string? TryParse(string transcript)
+    internal static string? TryParse(string transcript) => TryParse(transcript, out _);
+
+    // joined: the name was split off a single word ("Calcia" → "cia"), which
+    // only counts as a call when it then matches a saved contact - otherwise
+    // "Calculator" would be a call to "culator".
+    internal static string? TryParse(string transcript, out bool joined)
     {
+        joined = false;
         if (transcript.Length > 160) return null;
         var phrase = ApprovedVoiceAppLauncher.CommandPhrase(transcript);
         foreach (var lead in Leads)
@@ -100,7 +106,10 @@ internal static class CallVoiceCommand
         if (!phrase.Contains(' '))
             foreach (var verb in new[] { "call", "cal", "kol", "col" })
                 if (phrase.Length > verb.Length + 1 && phrase.StartsWith(verb, StringComparison.Ordinal))
+                {
+                    joined = true;
                     return phrase[verb.Length..];
+                }
         return null;
     }
 

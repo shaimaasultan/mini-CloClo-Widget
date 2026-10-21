@@ -162,6 +162,63 @@ internal static class Snapshot
         return 0;
     }
 
+    // "MiniCloClo.exe --quran-test <report file>": the choose-a-surah end of
+    // the Quran window - the whole of Al-Fatiha (which must start again from
+    // ayah 1 after the last), then ayat 3 to 5 - recording what it shows
+    // every half second. Plays the real recitation; speech is muted; the
+    // saved Quran position is put back afterwards.
+    public static int QuranTest(string reportPath)
+    {
+        var app = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        Voice.Muted = true;
+        // Progress goes to a throwaway folder: never the person's own file.
+        QuranStore.FolderOverride = Path.Combine(Path.GetTempPath(), "MiniCloClo-quran-test");
+        var lines = new System.Collections.Generic.List<string>();
+        try
+        {
+            var window = new QuranWindow(new QuranStore()) { SkipIntro = true, Left = -20000, ShowActivated = false, ShowInTaskbar = false };
+            window.Show();
+            // The choose-a-surah dialog acts on a new window right after
+            // Show(), so this must already be true.
+            lines.Add($"Loaded when Show() returns: {window.IsLoaded}");
+            Pump(500);
+            string State() => $"{(window.FindName("RepeatText") as System.Windows.Controls.TextBlock)?.Text} | reciting {window.IsReciting}";
+            var last = "";
+            void Watch(int seconds)
+            {
+                for (var i = 0; i < seconds * 2; i++)
+                {
+                    Pump(500);
+                    var state = State();
+                    if (state != last) lines.Add($"[{i / 2.0,5:0.0}s] {state}");
+                    last = state;
+                }
+            }
+            lines.Add("== PlayWholeSurah(1)");
+            window.PlayWholeSurah(1);
+            Watch(62);
+            lines.Add("== OpenRange(1, 3, 5)");
+            window.OpenRange(1, 3, 5);
+            Watch(18);
+            window.Close();
+        }
+        finally
+        {
+            File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        }
+        app.Shutdown();
+        return 0;
+    }
+
+    private static void Pump(int milliseconds)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(milliseconds) };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+    }
+
     // "MiniCloClo.exe --prayer-test <report file>": today's times for a few
     // listed cities, plus the spoken date, to compare with a mosque timetable.
     public static int PrayerTest(string reportPath)
@@ -194,6 +251,9 @@ internal static class Snapshot
             ("What time is it?", false), ("What's the date?", false), ("Next prayer.", false), ("Prayer times.", false),
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
+            ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
+            ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
+            ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("كلها", true), ("السورة كلها", true),
             ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
             ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
@@ -207,7 +267,11 @@ internal static class Snapshot
                 if (samples == null) { lines.Add($"{text} -> (no {(arabic ? "Arabic" : "English")} voice installed)"); continue; }
                 var heard = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic,
                     CallVoiceCommand.RecognitionHint(TestContacts, arabic)).GetAwaiter().GetResult();
-                string match = CallVoiceCommand.TryParse(heard) is { } who
+                // Answers to a choose-a-surah question, heard with its own hint.
+                var answer = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic, prompt: arabic
+                    ? QuranVoiceAnswers.ArabicRecognitionPrompt : QuranVoiceAnswers.RecognitionPrompt).GetAwaiter().GetResult();
+                var answers = $" [as an answer \"{answer}\": surah {QuranVoiceAnswers.Surah(answer)?.ToString() ?? "-"}, number {QuranVoiceAnswers.Number(answer)?.ToString() ?? "-"}, all {QuranVoiceAnswers.IsAll(answer)}, end {QuranVoiceAnswers.IsEnd(answer)}]";
+                string match = CallVoiceCommand.TryParse(heard, out var joined) is { } who && (!joined || CallVoiceCommand.Match(who, TestContacts) != null)
                         ? "call:" + (CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")")
                     : CallVoiceCommand.IsYes(heard) ? "yes (confirms a call)"
                     : WidgetVoiceCommands.TryMatch(heard, out var command) ? "widget:" + command
@@ -216,13 +280,21 @@ internal static class Snapshot
                     : ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app) ? "app:" + app
                     : WidgetVoiceCommands.TryMatchLoosely(heard, out var loose) ? "widget (loose):" + loose
                     : "NO MATCH";
-                lines.Add($"{text} -> heard \"{heard}\" -> {match}");
+                lines.Add($"{text} -> heard \"{heard}\" -> {match}{answers}");
             }
             catch (Exception ex)
             {
                 lines.Add($"{text} -> {ex.GetType().Name}: {ex.Message}");
             }
         }
+        lines.Add("-- choose-a-surah answers, as Whisper may write them --");
+        foreach (var heard in new[] { "1", "Surah 2.", "Al-Faatiha", "Fatiha.", "The Cow.", "Baqarah.", "Yaseen.", "Surat Al-Kahf", "114.",
+                     "115.", "Ayah 3.", "From ayah three.", "twenty-five", "Two hundred and eighty six.", "the first", "from the start",
+                     "All.", "All of it.", "The whole surah.", "To the end.", "Until the end of the surah.",
+                     "الفاتحه", "سورة البقرة", "سوره يس", "الكهف", "٣", "ثلاثة", "التالتة", "خمسة وعشرين", "ميتين وستة وتمانين",
+                     "من الآية ٣", "لحد ٥", "كلها", "السورة كلها", "للآخر",
+                     "1.4.", "واحد 4.", "From 3 to 5.", "الفاتحة. حدوه.", "Won tree.", "One, seven.", "2, 3, 4.", "واحد سلاسة جن.", "واحد سبات.", "واحد سباتن.", "اتنين تلاته اربعه", "حدوه", "جن", "Den.", "Forteen.", "Fiftin.", "Sixdeen.", "Twendy.", "One four.", "Two, eight, six.", "Seven.", "سبأ", "سبع", "Al-Fadiha.", "Al-Bakira.", "Surah Yawson.", "سلاسة جن.", "قوليها.", "Choosa sura.", "اخطار سورة.", "Quran surah.", "Quran, surah.", "Koran Sura.", "القرآن سورة", "القرآن وصورة جن.", "Quran.", "القرآن" })
+            lines.Add($"\"{heard}\" -> surah {QuranVoiceAnswers.Surah(heard)?.ToString() ?? "-"}, number {QuranVoiceAnswers.Number(heard)?.ToString() ?? "-"}, all {QuranVoiceAnswers.IsAll(heard)}, end {QuranVoiceAnswers.IsEnd(heard)}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
         lines.Add("-- transcripts as Whisper writes them --");
         foreach (var heard in new[] { "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
                      "No, don't call.", "Cancel.", "Yes. No.", "Calcia.", "Call sho.", "Callsho." })

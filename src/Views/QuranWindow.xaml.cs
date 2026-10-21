@@ -46,12 +46,38 @@ public partial class QuranWindow : Window
     private int _playIndex;
     // A one-off message for the status line, cleared when the range changes.
     private string? _notice;
+    // Whole-surah mode ("all" in the choose-a-surah dialog): the window shows
+    // the ayah being recited, goes through the whole surah, and starts again
+    // from the first ayah after the pause. Any other navigation leaves it.
+    private bool _wholeSurah;
 
     // Raised when the loop starts or stops, so the main window can keep hold
     // to talk from listening to the recitation, and stop it for the azan.
     public event Action<bool>? RecitingChanged;
 
     public bool IsReciting => _reciting;
+
+    // Set before showing the window when the caller says what is opened (the
+    // choose-a-surah dialog), so the usual spoken introduction is skipped.
+    public bool SkipIntro { get; set; }
+
+    // Opens a run of ayat (at most QuranStore.MaxRange) and recites it on a
+    // loop, after saying what was opened.
+    public void OpenRange(int surah, int from, int to)
+    {
+        ShowRange(surah, from, to);
+        AnnouncePosition(thenRecite: true);
+    }
+
+    // Recites the whole surah from its first ayah, starting again from the
+    // first when it ends.
+    public void PlayWholeSurah(int surah)
+    {
+        ShowRange(surah, 1, 1);
+        _wholeSurah = true;
+        UpdateState();
+        AnnouncePosition(thenRecite: true);
+    }
 
     private int Start => _store.Ayah;
     private int End => _store.AyahEnd;
@@ -95,7 +121,7 @@ public partial class QuranWindow : Window
         Loaded += (_, _) =>
         {
             PlayButton.Focus();
-            AnnouncePosition(intro: true);
+            if (!SkipIntro) AnnouncePosition(intro: true);
         };
     }
 
@@ -152,13 +178,20 @@ public partial class QuranWindow : Window
     public void AnnouncePosition(bool intro = false, bool? thenRecite = null)
     {
         var info = QuranText.GetSurah(_store.Surah);
-        var ayat = Length == 1 ? $"ayah {Start}" : $"ayat {Start} to {End}";
-        var ayatArabic = Length == 1 ? $"الآية {Start}" : $"الآيات من {Start} إلى {End}";
+        var ayat = _wholeSurah ? $"the whole surah, {info.AyahCount} ayat, repeating from the start"
+            : Length == 1 ? $"ayah {Start}" : $"ayat {Start} to {End}";
+        var ayatArabic = _wholeSurah ? $"السورة كلها، {info.AyahCount} آية، وبتتعاد من الأول"
+            : Length == 1 ? $"الآية {Start}" : $"الآيات من {Start} إلى {End}";
         var done = _store.MemorizedIn(_store.Surah);
         var english = $"{(intro ? "Quran memorization. " : "")}Surah {info.Name}, {ayat}. {done} of {info.AyahCount} ayat memorized." +
                       (intro ? " Control P to play, Control Right arrow when memorized, Control M for the meaning." : "");
         var arabic = $"{(intro ? "حفظ القرآن. " : "")}سورة {info.ArabicName}، {ayatArabic}. حافظ {done} من {info.AyahCount}." +
                      (intro ? " كنترول P للتشغيل، وكنترول سهم يمين لما تحفظ." : "");
+        if (MissingAudio() != null)
+        {
+            english += " There is no recitation installed for this, so it is shown as text.";
+            arabic += " مفيش تلاوة متسجلة للآيات دي، فهتظهر كتابة بس.";
+        }
         var resume = thenRecite ?? _reciting;
         SetReciting(false);
         _ = SayThenAsync(english, arabic, resume);
@@ -186,6 +219,7 @@ public partial class QuranWindow : Window
 
     private void ShowRange(int surah, int start, int end)
     {
+        _wholeSurah = false;
         var info = QuranText.GetSurah(surah);
         start = Math.Clamp(start, 1, info.AyahCount);
         end = Math.Clamp(end, start, Math.Min(info.AyahCount, start + QuranStore.MaxRange - 1));
@@ -216,6 +250,24 @@ public partial class QuranWindow : Window
 
         UpdateState();
         if (wasReciting) SetReciting(true);
+    }
+
+    // Whole-surah mode: shows (and saves as the place reached) the ayah about
+    // to be recited, without stopping the recitation as ShowRange does.
+    private void ShowWholeSurahAyah(int ayah)
+    {
+        _store.Ayah = _store.AyahEnd = ayah;
+        _store.Save();
+        var oldReady = _ready;
+        _ready = false;
+        AyahBox.SelectedIndex = ayah - 1;
+        AyahEndBox.ItemsSource = Enumerable.Range(ayah, Math.Min(QuranText.GetSurah(_store.Surah).AyahCount, ayah + QuranStore.MaxRange - 1) - ayah + 1)
+            .Select(n => new Choice(n, n.ToString(CultureInfo.CurrentCulture))).ToList();
+        AyahEndBox.SelectedIndex = 0;
+        _ready = oldReady;
+        BuildText();
+        System.Windows.Automation.AutomationProperties.SetHelpText(AyahText, $"{QuranText.GetSurah(_store.Surah).Name}, ayah {ayah}");
+        UpdateState();
     }
 
     // The range as runs, one per ayah, so the one being recited can be lit up.
@@ -318,7 +370,9 @@ public partial class QuranWindow : Window
             1 => hasAudio ? "heard once" : "read once",
             _ => hasAudio ? $"heard {_repeats} times" : $"read {_repeats} times",
         };
-        RepeatText.Text = _reciting && range
+        RepeatText.Text = _wholeSurah
+            ? $"Whole surah · ayah {Start} of {info.AyahCount}" + (_repeats > 0 ? $" · round {_repeats + 1}" : "")
+            : _reciting && range
             ? $"Ayah {Start + _playIndex} of {Start}–{End}" + (count.Length > 0 ? $" · {count}" : "")
             : count.Length > 0
                 ? char.ToUpper(count[0], CultureInfo.CurrentCulture) + count[1..]
@@ -388,6 +442,22 @@ public partial class QuranWindow : Window
     private void OnRecitationFinished()
     {
         if (!_reciting) return;
+        if (_wholeSurah)
+        {
+            var count = QuranText.GetSurah(_store.Surah).AyahCount;
+            if (Start < count)
+            {
+                ShowWholeSurahAyah(Start + 1);
+                if (MissingAudio() == null) PlayCurrent();
+                else SetReciting(false); // that ayah has no recording
+                return;
+            }
+            _repeats++;
+            ShowWholeSurahAyah(1);
+            _gapTimer.Interval = TimeSpan.FromSeconds(_store.GapSeconds);
+            _gapTimer.Start();
+            return;
+        }
         if (_playIndex < Length - 1)
         {
             _playIndex++;

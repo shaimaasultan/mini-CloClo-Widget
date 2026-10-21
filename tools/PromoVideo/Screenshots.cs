@@ -11,8 +11,8 @@ namespace PromoVideo;
 // "PromoVideo.exe --screenshots <folder>": pictures of the app's real
 // windows, filled with sample data, for the README. Each window is shown far
 // off-screen (nothing appears on the desktop), drawn to a PNG with a title
-// bar added, and closed. Speech is muted, and the Quran window's saved
-// progress (it saves its place as it opens) is put back afterwards.
+// bar added, and closed. Speech is muted, and the Quran window keeps its
+// progress in a throwaway folder (QuranStore.FolderOverride).
 internal static class Screenshots
 {
     private const double Scale = 1.5;   // drawn at 150% for crisp text
@@ -54,19 +54,12 @@ internal static class Screenshots
         Capture(new CustomReminderEditorWindow(new CustomReminderSettings { Message = "Take your medicine.", IntervalMinutes = 240, StartHour = 8, EndHour = 20 }, isNew: true),
             Path.Combine(folder, "reminder-editor.png"));
 
-        var progress = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MiniCloClo", "quran.json");
-        var saved = File.Exists(progress) ? File.ReadAllBytes(progress) : null;
-        try
-        {
-            var store = new QuranStore { Surah = 1, Ayah = 2, AyahEnd = 2, ShowEnglish = true, GapSeconds = 2, ReminderMinutes = 60 };
-            store.Memorized.AddRange([0]);
-            Capture(new QuranWindow(store), Path.Combine(folder, "quran.png"));
-        }
-        finally
-        {
-            if (saved != null) File.WriteAllBytes(progress, saved);
-            else if (File.Exists(progress)) File.Delete(progress);
-        }
+        // The Quran window saves its place as it opens: keep that in a
+        // throwaway folder, never the person's own progress file.
+        QuranStore.FolderOverride = Path.Combine(Path.GetTempPath(), "MiniCloClo-screenshots");
+        var store = new QuranStore { Surah = 1, Ayah = 2, AyahEnd = 2, ShowEnglish = true, GapSeconds = 2, ReminderMinutes = 60 };
+        store.Memorized.AddRange([0]);
+        Capture(new QuranWindow(store), Path.Combine(folder, "quran.png"));
         return 0;
     }
 

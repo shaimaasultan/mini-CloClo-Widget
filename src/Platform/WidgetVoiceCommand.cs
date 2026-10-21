@@ -9,7 +9,7 @@ namespace MiniCloClo;
 // only these fixed phrases count (compared after the same cleanup, with the
 // wake name, "please" and "now" tolerated); the transcript is never used as
 // anything but a key into this table.
-internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed }
+internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed }
 
 internal static class WidgetVoiceCommands
 {
@@ -41,6 +41,13 @@ internal static class WidgetVoiceCommands
             "quran", "the quran", "koran", "the koran", "open quran", "open the quran", "quran memorization",
             "memorize", "recite", "play quran", "play the quran", "repeat",
             "القران", "افتح القران", "المصحف", "افتح المصحف", "الحفظ", "حفظ القران", "شغل القران", "سمعني",
+        ]),
+        (WidgetVoiceCommand.ChooseSurah, [
+            "choose a surah", "choose surah", "choose a sura", "pick a surah", "select a surah", "open a surah",
+            "new surah", "a new surah", "change the surah", "change surah", "another surah", "surah", "a surah",
+            "quran surah", "quran sura", "quran a surah", "the quran surah", "koran surah", "surah quran",
+            "القران سوره", "قران سوره", "سوره القران", "المصحف سوره",
+            "اختار سوره", "اختر سوره", "اختار السوره", "سوره جديده", "غير السوره", "سوره تانيه", "افتح سوره", "سوره",
         ]),
         (WidgetVoiceCommand.QuranNext, [
             "next ayah", "next verse", "memorized", "i memorized it", "next",
@@ -111,6 +118,9 @@ internal static class WidgetVoiceCommands
         (WidgetVoiceCommand.NextPrayer, "prayer"), (WidgetVoiceCommand.NextPrayer, "salah"),
         (WidgetVoiceCommand.NextPrayer, "الصلاه"), (WidgetVoiceCommand.NextPrayer, "الاذان"),
         (WidgetVoiceCommand.Quran, "quran"), (WidgetVoiceCommand.Quran, "koran"),
+        (WidgetVoiceCommand.ChooseSurah, "surah"), (WidgetVoiceCommand.ChooseSurah, "sura"),
+        (WidgetVoiceCommand.ChooseSurah, "surat"), (WidgetVoiceCommand.ChooseSurah, "سوره"),
+        (WidgetVoiceCommand.ChooseSurah, "صوره"),
         (WidgetVoiceCommand.Quran, "القران"), (WidgetVoiceCommand.Quran, "المصحف"),
         (WidgetVoiceCommand.Reminders, "reminders"), (WidgetVoiceCommand.Reminders, "التذكيرات"),
         (WidgetVoiceCommand.Help, "help"), (WidgetVoiceCommand.Help, "مساعده"),
@@ -122,7 +132,16 @@ internal static class WidgetVoiceCommands
         var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length is 0 or > 4) return false;
         // "prayer times" names its own command; a plain keyword would make it
-        // the next prayer.
+        // the next prayer. "Quran" with "surah" anywhere in it ("Quran,
+        // surah please") asks the questions; plain "Quran" never does.
+        // An "و" run into it counts too: "القرآن سورة" is often heard as
+        // "القرآن وصورة".
+        if (Array.Exists(words, w => Array.Exists(Keywords, k => k.Command == WidgetVoiceCommand.ChooseSurah &&
+                (k.Word == w || (w.Length > 2 && w[0] == 'و' && k.Word == w[1..])))))
+        {
+            command = WidgetVoiceCommand.ChooseSurah;
+            return true;
+        }
         foreach (var word in words)
             foreach (var (candidate, keyword) in Keywords)
                 if (word == keyword) { command = candidate; return true; }

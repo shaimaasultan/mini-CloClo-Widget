@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Runtime.InteropServices;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -21,6 +22,13 @@ public sealed class LocalAudioPlayer : IDisposable
     private MediaFoundationReader? _reader;
     private bool _disposed;
     public bool IsPlaying { get; private set; }
+    // The thread that created the player (the window's): NAudio 3 reports
+    // the end of playback on its own audio thread, and whoever handles
+    // Finished updates the window, which only its own thread may touch.
+    // (Before WPF's message loop runs, the thread's dispatcher stands in.)
+    private readonly SynchronizationContext? _context = SynchronizationContext.Current
+        ?? (System.Windows.Threading.Dispatcher.FromThread(Thread.CurrentThread) is { } dispatcher
+            ? new System.Windows.Threading.DispatcherSynchronizationContext(dispatcher) : null);
     // Raised on the creating (UI) thread when a file ends or fails, not
     // after Stop.
     public event Action? Finished;
@@ -129,8 +137,15 @@ public sealed class LocalAudioPlayer : IDisposable
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
     {
-        // Posted to the UI thread; ignore a player that was replaced since.
-        if (!ReferenceEquals(sender, _player)) return;
+        if (_context != null) _context.Post(_ => Finish(sender), null);
+        else Finish(sender);
+    }
+
+    // On the creating thread; a player that was replaced (or stopped) since
+    // is ignored.
+    private void Finish(object? sender)
+    {
+        if (_disposed || !ReferenceEquals(sender, _player)) return;
         Stop();
         Finished?.Invoke();
     }

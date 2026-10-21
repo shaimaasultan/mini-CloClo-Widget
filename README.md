@@ -98,7 +98,8 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | The date / التاريخ | Says the date and the Hijri date |
 | Next prayer / الصلاة الجاية | Says the next prayer, its time and how long until it |
 | Prayer times / مواقيت الصلاة | Reads all of today's prayer times |
-| Quran / القرآن | Opens the Quran window; with it open, plays or pauses the recitation |
+| Quran / القرآن | Opens the Quran window where you left off; with it open, plays or pauses the recitation |
+| Quran surah / القرآن سورة (or "choose a surah") | Asks which surah, from which ayah and to which ayah, then opens and recites it ([Quran](#what-it-does-on-its-own)) |
 | Next / اللي بعده | Marks the ayah memorized and moves to the next |
 | Previous / اللي قبله | Goes back one ayah |
 | Reminders / التذكيرات | Opens the reminders |
@@ -139,7 +140,7 @@ still work. They can be turned off under *Voice and speech*.
 
 **On the widget**, once it has focus (click it, or open its menu): the same
 letters without Ctrl+Alt, plus **Space** to talk, **Shift+P** for all prayer
-times, **F1** for help, **Shift+F10** or the menu key for the menu, **Enter**
+times, **Shift+Q** to choose a surah, **F1** for help, **Shift+F10** or the menu key for the menu, **Enter**
 for "I've prayed" at prayer time, and **Esc** to close the label.
 
 In the **Quran window**: Ctrl+P (or F5) plays/pauses, Ctrl+→ marks memorized
@@ -202,6 +203,30 @@ reliably; Arabic is weaker with the small speech model, so the window
   minutes to 2 hours. Open it with the 📗 icon, Ctrl+Alt+Q or by saying
   "Quran"; **Repeat** (Ctrl+P) plays the ayah on a loop and **Memorized —
   next ayah** (Ctrl+→) moves on.
+
+  **Choose a surah by voice:** say **"Quran surah"** (or "القرآن سورة",
+  "choose a surah", "اختار سورة", or just "surah"), and Keeper asks three
+  questions — plain "Quran" never asks them — each answer
+  is its own hold of the right button after the chime:
+  1. *Which surah?* — its number ("2") or name ("Al-Baqara", "the Cow",
+     "البقرة"). Keeper says it back: "Surah Al-Baqara, 286 ayat."
+  2. *From which ayah?* — a number, or **"all"** ("the whole surah", "كلها")
+     to recite the whole surah from the first ayah to the last, starting again
+     from the first when it ends.
+  3. *To which ayah?* — a number, or "to the end". The Quran window opens on
+     those ayat and recites them on a loop (up to 20 ayat at a time; a longer
+     run is shortened to 20, and Keeper says so).
+
+  Numbers are said **digit by digit**, and Keeper asks for them that way:
+  "one four" is 14, "one seven" 17, "two three four" 234 ("واحد أربعة",
+  "اتنين تلاتة أربعة"). Ten short digit words are far easier to hear than
+  "fourteen" or "seventeen". Only those ten words are matched by sound
+  ("tree" for three, "سبات" for سبعة), so other speech is asked again rather
+  than guessed at. "14" said whole still works when it is heard right.
+
+  An unclear answer is asked again (the label shows what was heard), and
+  "cancel" stops the questions. The menu has *Choose a surah by voice…*, and
+  Shift+Q starts it when the widget has focus.
 
   <img src="docs/screenshots/quran.png" alt="Quran memorization window on Al-Fatiha, ayah 2, in large Uthmani script with its English meaning, Show English ticked, Previous, Repeat and Memorized - next ayah buttons, a progress bar showing 1 of 7 ayat memorized, and the installed Alafasy recitations" width="480">
 - **The time every hour**, if you turn it on (*Voice and speech*).

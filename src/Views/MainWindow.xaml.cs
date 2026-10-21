@@ -259,10 +259,10 @@ public partial class MainWindow : Window
         var talkArabic = _settings.PushToTalkEnabled ? "دوس كليك يمين مطول في أي مكان" : "دوس كنترول ألت V";
         ShowLabel("Help", "Say: time, date, next prayer, Quran, reminders, stop", "❔");
         Voice.Say($"{talk}, wait for the short chime, then say a command: what time is it, the date, next prayer, prayer times, " +
-                  "Quran, next, previous, reminders, call and a name, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
+                  "Quran, Quran surah, next, previous, reminders, call and a name, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
                   "or shut down." + keys,
             $"{talkArabic}، استنى صوت التنبيه القصير، وبعدين قول أمر: الساعة كام، التاريخ، الصلاة الجاية، مواقيت الصلاة، " +
-            "القرآن، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
+            "القرآن، القرآن سورة، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
             "أو اقفل الجهاز." + keysArabic);
     }
 
@@ -551,17 +551,20 @@ public partial class MainWindow : Window
 
     // ---- The Quran window ----
 
-    internal void OpenQuran()
+    internal void OpenQuran() => OpenQuran(skipIntro: false);
+
+    // skipIntro: the caller says what is opened (the choose-a-surah dialog).
+    private void OpenQuran(bool skipIntro)
     {
         if (_quranWindow != null)
         {
             if (_quranWindow.WindowState == WindowState.Minimized) _quranWindow.WindowState = WindowState.Normal;
             _quranWindow.Activate();
-            _quranWindow.AnnouncePosition();
+            if (!skipIntro) _quranWindow.AnnouncePosition();
             return;
         }
         _quranStore ??= QuranStore.Load();
-        var window = new QuranWindow(_quranStore) { Topmost = false };
+        var window = new QuranWindow(_quranStore) { Topmost = false, SkipIntro = skipIntro };
         window.RecitingChanged += on =>
         {
             Keeper.SetReading(on);
@@ -766,6 +769,7 @@ public partial class MainWindow : Window
             case Key.P when shift:
             case Key.A: SayPrayerTimes(); break;
             case Key.P: SayNextPrayer(); break;
+            case Key.Q when shift: StartChooseSurah(); break;
             case Key.Q: OpenQuran(); break;
             case Key.R: OpenCustomReminders(); break;
             case Key.K: OpenContacts(); break;
@@ -825,6 +829,7 @@ public partial class MainWindow : Window
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("_Prayer times and azan…", OpenPrayerTimes, icon: ""));
         menu.Items.Add(Item("_Quran memorization…", OpenQuran, icon: ""));
+        menu.Items.Add(Item("Choose a surah by voice…", StartChooseSurah));
         menu.Items.Add(Item("Custom _reminders…", OpenCustomReminders, icon: ""));
         menu.Items.Add(Item("_Contacts and calls…", OpenContacts, icon: ""));
         menu.Items.Add(new Separator());
