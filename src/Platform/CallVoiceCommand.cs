@@ -18,9 +18,11 @@ internal static class CallVoiceCommand
         "اعمل مكالمه ل", "اتصل علي ", "اتصل ب ", "اتصل ب", "اتصل ", "كلملي ", "كلم ", "رن علي ", "اطلب ",
     ];
 
+    // "Yet" is how Whisper sometimes writes a short "Yeah" - only as the
+    // whole reply, so "yet another" or "not yet" never confirm.
     private static readonly string[] YesPhrases =
     [
-        "yes", "yeah", "yep", "yes please", "yes call", "yes call him", "yes call her", "call", "call them", "ok", "okay", "sure", "confirm", "go ahead", "do it",
+        "yes", "yeah", "yep", "yet", "yes please", "yes call", "yes call him", "yes call her", "call", "call them", "ok", "okay", "sure", "confirm", "go ahead", "do it",
         "ايوه", "ايوا", "اه", "نعم", "اكيد", "تمام", "ماشي", "اتصل", "كلمه", "كلمها", "يلا", "موافق",
     ];
 

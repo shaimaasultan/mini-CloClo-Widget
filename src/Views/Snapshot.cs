@@ -299,7 +299,7 @@ internal static class Snapshot
                      "No, five.", "Cancel.", "Stop.", "Not now." })
             lines.Add($"\"{heard}\" -> back {QuranVoiceAnswers.IsBack(heard)}, cancel {ApprovedVoiceAppLauncher.IsCancelCommand(heard)}, number {QuranVoiceAnswers.Number(heard)?.ToString() ?? "-"}");
         lines.Add("-- transcripts as Whisper writes them --");
-        foreach (var heard in new[] { "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
+        foreach (var heard in new[] { "Yet.", "Yet!", "Not yet.", "Yet another.", "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
                      "No, don't call.", "Cancel.", "Yes. No.", "Calcia.", "Call sho.", "Callsho." })
             lines.Add($"\"{heard}\" -> yes: {CallVoiceCommand.IsYes(heard)}, call: " +
                       (CallVoiceCommand.TryParse(heard) is { } who ? CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")" : "-"));
