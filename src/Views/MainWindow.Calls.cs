@@ -60,7 +60,7 @@ public partial class MainWindow
         ShowLabel($"Call {contact.Name}?", $"{contact.Number} — say yes, or cancel", "📞", seconds: (int)CallConfirmTime.TotalSeconds);
         await SpeakPushToTalkStepAsync(
             $"Call {contact.Name}, {ContactSettings.SpokenNumber(contact.Number)}? Talk to me again and say yes, or cancel.",
-            $"أتصل ب{contact.OtherName ?? contact.Name}، {ContactSettings.SpokenNumber(contact.Number)}؟ كلمني تاني وقول ايوه، أو إلغاء.");
+            $"أتصل ب{contact.OtherName ?? contact.Name}، {ContactSettings.SpokenNumber(contact.Number)}؟ كلمني تاني وقول نعم عشان أتصل، أو لا عشان ألغي.");
         return true;
     }
 
@@ -94,7 +94,7 @@ public partial class MainWindow
         Keeper.SetVoiceStatus("failed");
         ShowLabel($"Call {contact.Name}?", $"Heard: {heard} — say yes, or cancel", "📞", seconds: (int)CallConfirmTime.TotalSeconds);
         await SpeakPushToTalkStepAsync($"I didn't catch that. Call {contact.Name}? Say yes, or cancel.",
-            $"ما فهمتش. أتصل ب{contact.OtherName ?? contact.Name}؟ قول ايوه، أو إلغاء.");
+            $"ما فهمتش. أتصل ب{contact.OtherName ?? contact.Name}؟ قول نعم عشان أتصل، أو لا عشان ألغي.");
         return true;
     }
 

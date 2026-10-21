@@ -255,7 +255,7 @@ internal static class Snapshot
             ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("No.", false), ("Go back.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
             ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
             ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
-            ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
+            ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true), ("نعم", true), ("نعم.", true), ("نعم، اتصل", true), ("نعم نعم", true), ("لا", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
         };
         var lines = new System.Collections.Generic.List<string>();
@@ -299,7 +299,7 @@ internal static class Snapshot
                      "No, five.", "Cancel.", "Stop.", "Not now." })
             lines.Add($"\"{heard}\" -> back {QuranVoiceAnswers.IsBack(heard)}, cancel {ApprovedVoiceAppLauncher.IsCancelCommand(heard)}, number {QuranVoiceAnswers.Number(heard)?.ToString() ?? "-"}");
         lines.Add("-- transcripts as Whisper writes them --");
-        foreach (var heard in new[] { "Yet.", "Yet!", "Not yet.", "Yet another.", "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
+        foreach (var heard in new[] { "نعم.", "نعم، إتصل.", "نام نام.", "نعم لا.", "لا نعم", "لأسفل.", "اي تصلار بأحمد.", "إتو صلاة بمامن.", "اي صلاة الجاية", "اتصلاق بأحمد.", "Yet.", "Yet!", "Not yet.", "Yet another.", "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
                      "No, don't call.", "Cancel.", "Yes. No.", "Calcia.", "Call sho.", "Callsho." })
             lines.Add($"\"{heard}\" -> yes: {CallVoiceCommand.IsYes(heard)}, call: " +
                       (CallVoiceCommand.TryParse(heard) is { } who ? CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")" : "-"));

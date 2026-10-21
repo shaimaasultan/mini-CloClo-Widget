@@ -157,7 +157,8 @@ Bluetooth, without Phone Link. Tested with an iPhone.
    each person — the name you'll say, optionally another name such as the
    Arabic one, and the number — and **Find my phone**. Save.
 3. Say **"call Mom"** (or "اتصل بماما"). CloClo reads the number back and asks;
-   talk to it again and say **"yes"** (or "cancel") within 45 seconds. A reply
+   talk to it again and say **"yes"** — in Arabic **"نعم"** — (or "cancel" /
+   "لا") within 45 seconds. A reply
    that starts with yes ("yes, call her") counts; one with "no" or "cancel"
    never does. In the window, select a contact and press **Enter** to call
    straight away.

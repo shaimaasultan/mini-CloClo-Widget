@@ -48,9 +48,15 @@ internal static class CallVoiceCommand
     private static readonly string[] YesWords =
         ["yes", "yeah", "yep", "yup", "ok", "okay", "sure", "confirm", "ايوه", "ايوا", "اه", "نعم", "اكيد", "تمام", "ماشي", "موافق", "يلا"];
 
+    // "نعم" is what Keeper asks for in Arabic. Whisper writes it well, but a
+    // repeated "نعم نعم" came out "نام نام": a word that sounds exactly like
+    // it counts too (its sound key is too short for the one-off rule below).
+    private static readonly string NaamSound = ApprovedVoiceAppLauncher.SoundKey("نعم");
+
     private static bool IsYesWord(string word)
     {
         if (Array.IndexOf(YesWords, word) >= 0) return true;
+        if (TranscriptCleanup.ContainsArabic(word) && ApprovedVoiceAppLauncher.SoundKey(word) == NaamSound) return true;
         foreach (var candidate in new[] { word, word.Length > 3 && word[0] is 'ب' or 'و' ? word[1..] : word })
         {
             var key = ApprovedVoiceAppLauncher.SoundKey(candidate);
@@ -66,27 +72,43 @@ internal static class CallVoiceCommand
     private static readonly string[] Verbs = ["call", "phone", "dial", "ring", "اتصل", "كلم", "كلملي", "رن"];
 
     // "Call ..." with the verb misheard by a sound ("اتصلر بأحمد"): the
-    // first word sounds like a call verb. Returns the words after it.
-    private static string? LooseLead(string phrase)
+    // first word sounds like a call verb. Returns the words after it. split:
+    // the verb was heard as two words ("اي تصلار بأحمد", "إتو صلاة بماما"),
+    // which - like a name run into the verb - counts only when the rest
+    // names a saved contact, since "اي صلاة" is no call.
+    private static string? LooseLead(string phrase, out bool split)
     {
-        var space = phrase.IndexOf(' ');
-        if (space <= 0) return null;
-        var first = ApprovedVoiceAppLauncher.SoundKey(phrase[..space]);
+        split = false;
+        var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 2) return null;
+        if (SoundsLikeVerb(words[0])) return string.Join(' ', words[1..]);
+        if (words.Length >= 3 && TranscriptCleanup.ContainsArabic(words[0]) && SoundsLikeVerb(words[0] + words[1]))
+        {
+            split = true;
+            return string.Join(' ', words[2..]);
+        }
+        return null;
+    }
+
+    private static bool SoundsLikeVerb(string word)
+    {
+        var heard = ApprovedVoiceAppLauncher.SoundKey(word);
         foreach (var verb in Verbs)
         {
             var target = ApprovedVoiceAppLauncher.SoundKey(verb);
-            if (target.Length >= 2 && ApprovedVoiceAppLauncher.EditDistance(first, target) <= (target.Length >= 4 ? 1 : 0))
-                return phrase[(space + 1)..].Trim();
+            if (target.Length >= 2 && ApprovedVoiceAppLauncher.EditDistance(heard, target) <= (target.Length >= 4 ? 1 : 0))
+                return true;
         }
-        return null;
+        return false;
     }
 
     // The name after "call ...", or null when it isn't a call command.
     internal static string? TryParse(string transcript) => TryParse(transcript, out _);
 
-    // joined: the name was split off a single word ("Calcia" → "cia"), which
-    // only counts as a call when it then matches a saved contact - otherwise
-    // "Calculator" would be a call to "culator".
+    // joined: the name was split off a single word ("Calcia" → "cia"), or the
+    // verb was heard as two words ("اي تصلار"); either only counts as a call
+    // when the name then matches a saved contact - otherwise "Calculator"
+    // would be a call to "culator".
     internal static string? TryParse(string transcript, out bool joined)
     {
         joined = false;
@@ -100,7 +122,7 @@ internal static class CallVoiceCommand
                 if (name.StartsWith(filler, StringComparison.Ordinal)) name = name[filler.Length..];
             return name.Length > 0 ? name : null;
         }
-        var loose = LooseLead(phrase);
+        var loose = LooseLead(phrase, out joined);
         if (!string.IsNullOrEmpty(loose)) return loose;
         // A short name run into the verb: "Call sho." heard as "Calcia".
         // What follows "call"/"cal" is then matched against the contacts
@@ -135,6 +157,11 @@ internal static class CallVoiceCommand
         // "اتصل بماما" leaves "ماما" after the "اتصل ب" lead, but a name that
         // itself starts with ب is also tried with it.
         if (spokenName.StartsWith('ب') && spokenName.Length > 2) candidates.Add(spokenName[1..]);
+        // Whisper often adds a letter to the end of an Arabic name ("بمامن"
+        // for "بماما"); without it, the start-of-a-name rule below can match.
+        foreach (var candidate in candidates.ToList())
+            if (candidate.Length >= 4 && TranscriptCleanup.ContainsArabic(candidate) && !candidate.Contains(' '))
+                candidates.Add(candidate[..^1]);
 
         foreach (var candidate in candidates)
             foreach (var contact in contacts)
