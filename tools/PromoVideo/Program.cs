@@ -16,6 +16,7 @@ namespace PromoVideo;
 
 // Makes the Mini CloClo promo video, offline:
 //   PromoVideo.exe <output.mp4> [work folder] [--arabic]
+//   PromoVideo.exe --screenshots <folder>   (README pictures; see Screenshots.cs)
 // --arabic: narrated by Microsoft Hoda, laid out right to left.
 // Each scene is drawn with WPF at 1920x1080 (the avatar is the app's own
 // KeeperView), its narration is spoken by a Windows voice into a WAV, the
@@ -47,6 +48,7 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--screenshots") return Screenshots.Run(args[1]);
         Rtl = args.Contains("--arabic");
         args = args.Where(a => a != "--arabic").ToArray();
         var output = Path.GetFullPath(args.Length > 0 ? args[0] : Rtl ? "MiniCloClo-promo-ar.mp4" : "MiniCloClo-promo.mp4");

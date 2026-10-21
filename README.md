@@ -157,6 +157,10 @@ Bluetooth, without Phone Link. Tested with an iPhone.
    never does. In the window, select a contact and press **Enter** to call
    straight away.
 
+| Contacts and calls (Ctrl+Alt+K) | Adding a contact |
+|---|---|
+| <img src="docs/screenshots/contacts.png" alt="Contacts and calls window: the phone that places calls (My iPhone) with a Find my phone button, a list of contacts - Mom with ماما, Ahmed with أحمد, Dr. Sara's clinic - and Call, Add, Edit, Remove and Say the number buttons" width="400"> | <img src="docs/screenshots/contact-editor.png" alt="New contact form: Name Mom, other name ماما, phone number 416 555 0123, with Say the number, Cancel and Save" width="330"> |
+
 How it works: CloClo connects to the phone's hands-free service, the way a car
 kit does, sends one dial request, and disconnects. The phone places the call
 on its own line, and **the call's sound is on the phone** (or a headset paired
@@ -181,10 +185,21 @@ reliably; Arabic is weaker with the small speech model, so the window
   Prayers missed while the PC was asleep or off aren't announced late.
 - **Custom reminders** (up to 10): a message, how often (15 minutes to 4
   hours) and active hours. Each is spoken, and can play a sound file first.
+  Open them with the ⏰ icon, Ctrl+Alt+R or by saying "reminders"; **Add**
+  makes a new one and **Say it now** tries it out.
+
+  | Your reminders | Adding a reminder |
+  |---|---|
+  | <img src="docs/screenshots/reminders.png" alt="Custom reminders window listing Drink a glass of water every hour 9 to 21, Take your medicine every 4 hours 8 to 20, and Stand up and stretch every 2 hours (off), with Add, Edit, Say it now, Turn off and Remove buttons" width="400"> | <img src="docs/screenshots/reminder-editor.png" alt="New reminder form: message Take your medicine, repeat every 4 hours, active from 8:00 AM until 8:00 PM, reminder on, say the message out loud, and buttons to choose and preview a sound" width="340"> |
+
 - **Quran**: the Uthmani text with the English meaning, recited ayah by ayah
   on a loop from the installed recitations or a folder you choose. It
   remembers what you've memorized, and can remind you to review every 30
-  minutes to 2 hours.
+  minutes to 2 hours. Open it with the 📗 icon, Ctrl+Alt+Q or by saying
+  "Quran"; **Repeat** (Ctrl+P) plays the ayah on a loop and **Memorized —
+  next ayah** (Ctrl+→) moves on.
+
+  <img src="docs/screenshots/quran.png" alt="Quran memorization window on Al-Fatiha, ayah 2, in large Uthmani script with its English meaning, Show English ticked, Previous, Repeat and Memorized - next ayah buttons, a progress bar showing 1 of 7 ayat memorized, and the installed Alafasy recitations" width="480">
 - **The time every hour**, if you turn it on (*Voice and speech*).
 
 Reminders keep coming while the avatar is asleep (after the *Sleep after*

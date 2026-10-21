@@ -6,6 +6,9 @@ using System.Windows;
 // app's own folder, where another program could place a look-alike.
 [assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 
+// tools\PromoVideo opens the app's windows to take the README screenshots.
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("PromoVideo")]
+
 [assembly:ThemeInfo(
     ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
                                                 //(used if a resource is not found in the page,

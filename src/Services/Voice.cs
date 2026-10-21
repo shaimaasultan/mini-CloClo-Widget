@@ -13,6 +13,10 @@ public static class Voice
 {
     private static Func<bool> _arabic = () => false;
 
+    // Silences everything said through here - for tools that open the app's
+    // windows to take screenshots (tools\PromoVideo). The app never sets it.
+    public static bool Muted { get; set; }
+
     public static void Configure(Func<bool> preferArabic, double rate)
     {
         _arabic = preferArabic;
@@ -26,6 +30,7 @@ public static class Voice
 
     public static void Say(string english, string? arabic = null, Action? onStarted = null)
     {
+        if (Muted) return;
         var text = Pick(english, arabic);
         SpeechReader.Speak(text, onStarted, selectedVoice: PreferredVoice(text));
     }
@@ -33,6 +38,7 @@ public static class Voice
     // Says it and waits until it has been said (at most `limit`).
     public static async Task SayAndWaitAsync(string english, string? arabic = null, TimeSpan? limit = null)
     {
+        if (Muted) return;
         var text = Pick(english, arabic);
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         void OnFinished() => finished.TrySetResult();
