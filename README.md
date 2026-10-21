@@ -15,11 +15,12 @@ can't see the screen well. It keeps only:
 
 ## Watch it
 
-[![Mini CloClo — watch the video (1:53)](docs/video/promo-thumbnail.png)](docs/video/MiniCloClo-promo.mp4)
+[![Mini CloClo — watch the video (1:53)](docs/video/promo-thumbnail.png)](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo.mp4)
 
-▶ [Watch the video in English](docs/video/MiniCloClo-promo.mp4) (1:53) ·
-[شاهد الفيديو بالعربية](docs/video/MiniCloClo-promo-ar.mp4) (2:19, narrated by Hoda).
-Both have captions, so they work with the sound off.
+▶ [Watch the video in English](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo.mp4) (1:53) ·
+[شاهد الفيديو بالعربية](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo-ar.mp4) (2:19, narrated by Hoda).
+Both have captions, so they work with the sound off. They're attached to the
+[1.0 release](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.0.0).
 
 There is no weather, no location lookup and no internet at all: the build
 fails if any code tries to go online (`scripts/check-no-network.ps1`). The one
@@ -266,7 +267,9 @@ dropped after each command.
   app's own avatar, narration by a Windows voice, encoded by Windows.
   `PromoVideo.exe <output.mp4>` for English, add `--arabic` for Arabic. It
   hides the account name the avatar shows on its shirt. The videos are in
-  `docs/video/`, stored with Git LFS.
+  `docs/video/`, stored with Git LFS, and attached to each release — the
+  README links the release copies, whose downloads don't use the LFS
+  bandwidth allowance.
 
 Debug builds have five test switches:
 
