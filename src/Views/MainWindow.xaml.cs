@@ -464,9 +464,10 @@ public partial class MainWindow : Window
         {
             if (!_customReminderLastChecked.TryGetValue(reminder, out var lastChecked))
                 lastChecked = _customReminderLastChecked[reminder] = now;
-            // Reminders wait while the avatar is asleep (nobody at the PC) or
-            // a prayer look is on, and outside their hours.
-            if (!reminder.Enabled || _activityState != "awake" || !IsWithinReminderHours(reminder, now))
+            // Reminders keep coming while the avatar is asleep: no keyboard or
+            // mouse use doesn't mean nobody is listening. They wait only while
+            // the prayer look is on, and outside their hours.
+            if (!reminder.Enabled || _activityState == "prayer" || !IsWithinReminderHours(reminder, now))
             {
                 _customReminderLastChecked[reminder] = now;
                 continue;
@@ -531,10 +532,10 @@ public partial class MainWindow : Window
     }
 
     // The ayah being memorized, every so often if chosen in the Quran window
-    // - only while awake, like the custom reminders.
+    // - asleep too, like the custom reminders, but not during the prayer look.
     private void QuranReminderTick(DateTime now)
     {
-        if (_activityState != "awake") { _lastQuranReminder = now; return; }
+        if (_activityState == "prayer") { _lastQuranReminder = now; return; }
         _quranStore ??= QuranStore.Load();
         var minutes = _quranStore.ReminderMinutes;
         if (minutes <= 0 || now - _lastQuranReminder < TimeSpan.FromMinutes(minutes)) return;

@@ -1,13 +1,14 @@
 # Mini CloClo
 
-A small, **completely offline** version of the CloClo desktop widget, made for
-someone who can't see the screen well. It keeps only:
+A small, **offline** version of the CloClo desktop widget, made for someone who
+can't see the screen well. It keeps only:
 
 - **Voice commands** — talk to it instead of looking for it.
 - **Custom reminders** — spoken out loud.
 - **Prayer times and azan** — announced out loud, then the azan (a built-in
   recording, or your own).
 - **Quran memorization** — recitation on a loop, controlled by keyboard or voice.
+- **Calling** — "call Mom" places a call on your mobile phone over Bluetooth.
 - **The avatar**, which changes with what's happening (prayer clothes, reading
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
 - **The time and date** — large, plus the Hijri date and the next prayer.
@@ -15,45 +16,69 @@ someone who can't see the screen well. It keeps only:
 There is no weather, no location lookup and no internet at all: the build
 fails if any code tries to go online (`scripts/check-no-network.ps1`). The one
 connection it can make is over Bluetooth, to your own paired phone, and only
-while placing a call you asked for (see [Calling](#calling)).
-Everything it shows is also spoken, and everything can be reached without
-the mouse.
+while placing a call you asked for (see [Calling](#calling)). Everything it
+shows is also spoken, and everything can be reached without the mouse. The
+widget and every window have names and labels for screen readers such as
+Narrator.
+
+## Requirements
+
+- Windows 10 version 2004 or later, or Windows 11, 64-bit.
+- For voice commands: a microphone, and a processor with AVX2 and FMA (most
+  from 2015 on). Without them everything else still works, by keyboard.
+- For calls: Bluetooth, and a mobile phone paired with the PC.
+- About 360 MB of disk. While running it uses roughly 500–700 MB of memory,
+  most of it the speech model, which is kept loaded so commands start at once.
+- To build it: the [.NET 10 SDK](https://dotnet.microsoft.com/download), and
+  [Git LFS](https://git-lfs.com) to get the speech model when cloning.
 
 ## Install
 
 Double-click **`scripts\Install-MiniCloClo.cmd`** (as yourself, not as
 administrator). It builds Mini CloClo, installs it into
 `%LOCALAPPDATA%\Programs\MiniCloClo`, adds Start Menu and desktop shortcuts,
-makes it start with Windows and starts it. To build it you need the
-[.NET 10 SDK](https://dotnet.microsoft.com/download); to run it, nothing —
+makes it start with Windows and starts it. It needs no .NET installed to run —
 it carries its own runtime.
 
-- **Ctrl+Alt+C** opens Mini CloClo from anywhere (the shortcuts' key).
-- To remove it: `scripts\Uninstall-MiniCloClo.cmd` (your settings are kept;
+- **Ctrl+Alt+C** opens Mini CloClo from anywhere (the shortcuts' key). If it
+  is already running, it says so.
+- **To update**, run the installer again: it closes the running copy, replaces
+  it and keeps your settings, reminders, contacts and Quran progress.
+- **To remove it**: `scripts\Uninstall-MiniCloClo.cmd` (your settings are kept;
   `uninstall.ps1 -RemoveSettings` removes them too).
 
-**First thing to set:** your city, for the prayer times. Say "prayer times"
-or press Ctrl+Alt+M → *Prayer times and azan…* and pick it from the list (or
+**Quran recitations are not in git** (they aren't ours to redistribute). The
+installer packs whatever per-ayah MP3s are in `Assets\Recitations\<reciter>\`,
+named like everyayah.com's (`001001.mp3` is Al-Fatiha 1). On a fresh clone that
+folder is empty, so the Quran window is text only until you add them — or
+choose a folder of recitations from inside the Quran window.
+
+**First thing to set:** your city, for the prayer times. Click the 🕌 icon, or
+press Ctrl+Alt+M → *Prayer times and azan…*, and pick it from the list (or
 choose *Another place* and type its latitude and longitude). On first run it
 picks a listed city in the PC's time zone, or Cairo.
 
 **Speech voices:** replies use Windows' own voices. English works out of the
-box. For Arabic replies, add the Arabic speech pack in **Settings → Time &
-language → Speech** (Microsoft Hoda), then turn on *Voice and speech → Voice
-commands and replies in Arabic*.
+box. For Arabic replies, add an Arabic voice in **Settings → Time & language →
+Speech → Add voices** (Microsoft Hoda is Egyptian), then turn on *Voice and
+speech → Voice commands and replies in Arabic*.
 
 **Optional — let Windows enforce "offline":** double-click
 `scripts\Block-MiniCloClo-Network.cmd` and approve the administrator prompt. It
 adds two Windows Firewall rules that block all of `MiniCloClo.exe`'s network
-traffic, in and out, whatever code inside it tries. Check them any time with
+traffic, in and out, whatever code inside it tries. Calls still work, because
+Bluetooth isn't network traffic. Check the rules any time with
 `scripts\Set-MiniCloCloFirewall.ps1 -Check`; remove them with `-Remove` from an
 administrator PowerShell.
 
 ## Talking to it
 
 Hold the **right mouse button anywhere for a second** (or press
-**Ctrl+Alt+V**, or click the 🎤 icon), wait for the short rising chime (the 🎤 badge turns blue), say a command and
-let go (press Ctrl+Alt+V again). A short right-click still works as usual.
+**Ctrl+Alt+V**, or click the 🎤 icon), wait for the short rising chime — that's
+when it starts listening — say a command and let go (or press Ctrl+Alt+V
+again). A short right-click still works as usual. Talking to it stops a
+recitation, the azan or speech that is playing, so "stop", "next" and
+"previous" work while the Quran is being recited.
 
 | Say | It does |
 |---|---|
@@ -67,17 +92,21 @@ let go (press Ctrl+Alt+V again). A short right-click still works as usual.
 | Reminders / التذكيرات | Opens the reminders |
 | Call Mom / اتصل بماما | Reads the contact's number back, then calls after "yes" ([Calling](#calling)) |
 | Stop / اسكت | Stops the azan, a recitation or speech |
+| Cancel / إلغاء | Cancels a call or a shutdown waiting for an answer |
 | I prayed / صليت | Ends the prayer look |
 | Help / مساعدة | Says the commands and shortcuts |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
-Recognition runs on this PC with the bundled Whisper *base* model; no audio
-is saved or sent. English is recognized more reliably than Arabic with this
-small model. Talking to it stops a recitation or azan that is playing, so
-"stop", "next" and "previous" work while the Quran is being recited.
+Recognition runs on this PC with the bundled Whisper *base* model; what you
+say is never saved or sent. English is recognized more reliably than Arabic
+with this small model. When a command isn't understood, the label under the
+icons shows **"Heard: …"** — what the recognizer wrote — which helps tell a
+noisy microphone from a misheard word.
 
-## Keyboard shortcuts (from any app)
+## Keyboard
+
+**From any app**, with Ctrl+Alt:
 
 | Ctrl+Alt + | |
 |---|---|
@@ -96,9 +125,14 @@ small model. Talking to it stops a recitation or azan that is playing, so
 If another app already uses one of these, Mini CloClo says so and the rest
 still work. They can be turned off under *Voice and speech*.
 
+**On the widget**, once it has focus (click it, or open its menu): the same
+letters without Ctrl+Alt, plus **Space** to talk, **Shift+P** for all prayer
+times, **F1** for help, **Shift+F10** or the menu key for the menu, **Enter**
+for "I've prayed" at prayer time, and **Esc** to close the label.
+
 In the **Quran window**: Ctrl+P (or F5) plays/pauses, Ctrl+→ marks memorized
 and moves on, Ctrl+← goes back, Ctrl+I says where you are, Ctrl+M reads the
-English meaning. Every button also has an Alt access key.
+English meaning. The buttons in its windows have Alt access keys (the underlined letter).
 
 ## Calling
 
@@ -110,36 +144,45 @@ Bluetooth, without Phone Link. Tested with an iPhone.
    each person — the name you'll say, optionally another name such as the
    Arabic one, and the number — and **Find my phone**. Save.
 3. Say **"call Mom"** (or "اتصل بماما"). CloClo reads the number back and asks;
-   talk to it again and say **"yes"** (or "cancel"). In the window, select a
-   contact and press **Enter** to call straight away.
+   talk to it again and say **"yes"** (or "cancel") within 45 seconds. A reply
+   that starts with yes ("yes, call her") counts; one with "no" or "cancel"
+   never does. In the window, select a contact and press **Enter** to call
+   straight away.
 
 How it works: CloClo connects to the phone's hands-free service, the way a car
 kit does, sends one dial request, and disconnects. The phone places the call
 on its own line, and **the call's sound is on the phone** (or a headset paired
-to the phone), not the PC. If Bluetooth was off, CloClo turns it on for the
-call and back off afterwards; if it was on (a Bluetooth headset in use), it
-leaves it on. Only saved contacts can be called, and a voice call is always
-confirmed first. English names are recognized reliably; Arabic is weaker with
-the small speech model, so the window (Ctrl+Alt+K, Enter) is the dependable
-way for Arabic speakers.
+to the phone), not the PC; you hang up on the phone. The phone needs to be
+nearby, unlocked and with Bluetooth on. If the PC's Bluetooth was off, CloClo
+turns it on for the call and back off afterwards (Windows must allow apps to
+control radios: **Settings → Privacy & security → Radios**); if it was on (a
+Bluetooth headset in use), it leaves it on. Only saved contacts can be called,
+and a voice call is always confirmed first. English names are recognized
+reliably; Arabic is weaker with the small speech model, so the window
+(Ctrl+Alt+K, Enter) is the dependable way for Arabic speakers.
 
 ## What it does on its own
 
 - **Prayer times** are worked out on the PC (Egyptian, Umm al-Qura, Muslim
   World League, Karachi or ISNA; Standard or Hanafi Asr). At each prayer it
   says "It's time for the Asr prayer", then plays the azan — the built-in
-  recording from `Assets\Azan` (Aaqib Azeez), or one of your own chosen with
-  *Choose azan audio…* (*Use built-in* goes back) — and the avatar changes into prayer clothes on a prayer mat until you
-  say "I prayed" (or click the green check or the head). It can also warn you
-  5–30 minutes before each prayer (10 by default).
+  recording from `Assets\Azan`, or your own chosen with *Choose azan audio…*
+  (*Use built-in* goes back) — and the avatar changes into prayer clothes on a
+  prayer mat until you say "I prayed" (or click the green check or the head).
+  It can also warn you 5–30 minutes before each prayer (10 by default).
+  Prayers missed while the PC was asleep or off aren't announced late.
 - **Custom reminders** (up to 10): a message, how often (15 minutes to 4
   hours) and active hours. Each is spoken, and can play a sound file first.
 - **Quran**: the Uthmani text with the English meaning, recited ayah by ayah
-  on a loop from the recitations installed with it (Mishary Alafasy, Al-Fatiha
-  and Al-Baqara, packed from `Assets\Recitations`), or from a folder of
-  per-ayah MP3s you choose. It remembers what you've memorized, and can remind
-  you to review every 30 minutes to 2 hours.
-- **The time every hour**, if you turn it on.
+  on a loop from the installed recitations or a folder you choose. It
+  remembers what you've memorized, and can remind you to review every 30
+  minutes to 2 hours.
+- **The time every hour**, if you turn it on (*Voice and speech*).
+
+Reminders keep coming while the avatar is asleep (after the *Sleep after*
+time with no keyboard or mouse use), since not touching the PC doesn't mean
+nobody is listening. They wait only while the prayer look is on, until "I
+prayed".
 
 ## The widget
 
@@ -147,40 +190,66 @@ The time sits on top, large, with the sun by day and the moon at night: from
 sunrise and sunset in your city when it's in the PC's time zone, otherwise
 6 AM to 6 PM by the PC's clock. Below the avatar are the date, the Hijri date
 and the next prayer, each on a dark plate that reads on any wallpaper. Under
-them, four icons: 🕌 prayer times, 📗 Quran, ⏰ reminders, 🎤 talk. Click the
-head to hear the time; drag to move it; right-click or double-click for the
-menu. *Look → Size* makes it 1×, 1.5× (default) or 2× as large.
+them, four icons: 🕌 prayer times, 📗 Quran, ⏰ reminders, 🎤 talk, and a
+label for messages — click it to hear it again, or its ✕ to close it. Click
+the head to hear the time; drag to move the widget; right-click or
+double-click for the menu. *Look → Size* makes it 1×, 1.5× (default) or 2× as
+large.
 
 The menu also has the avatar (Keeper or Lady Keeper) and outfit colour,
-motion, when it falls asleep, speaking speed, always on top and start with
-Windows.
+motion, when it falls asleep, speaking speed, the startup greeting, always on
+top and start with Windows. The **tray icon** (by the clock) has the same
+menu, plus *Hide/Show the widget*; double-click it to hide or show the widget —
+hidden, it keeps working and its shortcuts too.
+
+## Troubleshooting
+
+| What happens | What to do |
+|---|---|
+| Nothing is spoken | Check the volume and that a Windows voice is installed (Settings → Time & language → Speech) |
+| "Voice commands need a newer processor" | The PC lacks AVX2/FMA; use the keyboard shortcuts |
+| "Listening stopped" / "Didn't hear a command" | Check the default microphone (Settings → System → Sound), and speak after the chime |
+| A command isn't understood | Look at "Heard: …" on the label; speak a little slower, closer to the microphone |
+| "Some shortcuts are taken" | Another app uses that Ctrl+Alt key; the rest still work |
+| "Couldn't reach your phone" | Phone nearby, unlocked, Bluetooth on; in Contacts and calls, *Find my phone* again |
+| Phone Link says "blocked by your system administrator" | Not needed: calls go straight over Bluetooth |
+| Install or uninstall says a file is in use | Choose *Exit* from Mini CloClo's menu and run it again |
 
 ## Where things are kept
 
-- Settings, reminders and contacts: `%APPDATA%\MiniCloClo\settings.json`
+- Settings, reminders and contacts (names and numbers, in plain text):
+  `%APPDATA%\MiniCloClo\settings.json`
 - Quran progress: `%APPDATA%\MiniCloClo\quran.json`
-- Error log (exception types only): `%LOCALAPPDATA%\MiniCloClo\errors.log`
+- Error log (exception types only, no text you said or typed):
+  `%LOCALAPPDATA%\MiniCloClo\errors.log`
+
+Nothing else is written: audio from the microphone stays in memory and is
+dropped after each command.
 
 ## Project layout
 
-- `src/Views/` — the widget (`MainWindow*.cs`, `KeeperView`), the prayer,
-  Quran and reminder windows.
-- `src/Services/` — prayer times, Quran text and progress, speech, the
-  offline city list, settings.
-- `src/Platform/` — voice commands, the right-button hook, single instance,
-  startup and shutdown.
-- `scripts/` — install, uninstall, recitation packing, the offline check.
+- `src/Views/` — the widget (`MainWindow*.cs`, `KeeperView`) and its windows:
+  prayer times, Quran, reminders, contacts and calls.
+- `src/Services/` — prayer times and the offline city list, Quran text and
+  progress, speech and the listening chime, the azan library, settings.
+- `src/Platform/` — voice commands and call matching, the right-button hook,
+  the Bluetooth dialer, single instance, startup and shutdown.
+- `scripts/` — install, uninstall, recitation packing, the offline check and
+  the firewall rules.
 
-Debug builds have five test switches: `MiniCloClo.exe --snapshot <folder>`
-draws every avatar look to PNG files, `--voice-test <file>` speaks test
-commands with a Windows voice and runs them through the recognizer, and
-`--prayer-test <file>` writes today's times for a few cities, and
-`--load-trace <file>` records which part of the app loads any networking
-library (it shows they come only from WPF's startup and Windows' speech
-voices, and that none of them connects anywhere), and
-`--bt-test <file> <phone> [number]` connects to the paired phone and does the
-hands-free handshake — with a number it also dials it and checks the call
-outlives the disconnect.
+Debug builds have five test switches:
+
+- `MiniCloClo.exe --snapshot <folder>` draws every avatar look to PNG files.
+- `--voice-test <file>` speaks test commands with a Windows voice and runs
+  them through the recognizer.
+- `--prayer-test <file>` writes today's times, sunrise and sunset for a few
+  cities.
+- `--load-trace <file>` records which part of the app loads any networking
+  library (only WPF's startup and Windows' speech voices do, and none of them
+  connects anywhere).
+- `--bt-test <file> <phone> [number]` connects to the paired phone and does
+  the hands-free handshake — with a number it also dials it and checks the
+  call outlives the disconnect.
 
 ## Credits
 
@@ -188,5 +257,6 @@ Built from the full CloClo widget (`C:\cloclo-widget`). The Quran text is the
 [Tanzil Project](https://tanzil.net)'s verified Uthmani text (CC BY 3.0) and
 the English meaning is Saheeh International's, as published by Tanzil, both
 unchanged. The recitations are Mishary Alafasy's, from everyayah.com, for
-personal use. Speech recognition: [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
-through Whisper.net.
+personal use. The built-in azan is recited by Aaqib Azeez. Speech
+recognition: [whisper.cpp](https://github.com/ggerganov/whisper.cpp) through
+Whisper.net.
