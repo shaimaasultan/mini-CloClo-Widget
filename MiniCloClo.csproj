@@ -26,6 +26,8 @@
          folder for another program to plant a DLL in. -->
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- tools\ holds separate projects (the promo video maker), not app code. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

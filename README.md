@@ -13,6 +13,14 @@ can't see the screen well. It keeps only:
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
 - **The time and date** — large, plus the Hijri date and the next prayer.
 
+## Watch it
+
+[![Mini CloClo — watch the video (1:53)](docs/video/promo-thumbnail.png)](docs/video/MiniCloClo-promo.mp4)
+
+▶ [Watch the video in English](docs/video/MiniCloClo-promo.mp4) (1:53) ·
+[شاهد الفيديو بالعربية](docs/video/MiniCloClo-promo-ar.mp4) (2:19, narrated by Hoda).
+Both have captions, so they work with the sound off.
+
 There is no weather, no location lookup and no internet at all: the build
 fails if any code tries to go online (`scripts/check-no-network.ps1`). The one
 connection it can make is over Bluetooth, to your own paired phone, and only
@@ -236,6 +244,11 @@ dropped after each command.
   the Bluetooth dialer, single instance, startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check and
   the firewall rules.
+- `tools/PromoVideo/` — makes the promo videos, offline: scenes drawn with the
+  app's own avatar, narration by a Windows voice, encoded by Windows.
+  `PromoVideo.exe <output.mp4>` for English, add `--arabic` for Arabic. It
+  hides the account name the avatar shows on its shirt. The videos are in
+  `docs/video/`, stored with Git LFS.
 
 Debug builds have five test switches:
 
