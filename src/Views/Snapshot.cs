@@ -194,7 +194,8 @@ internal static class Snapshot
             ("What time is it?", false), ("What's the date?", false), ("Next prayer.", false), ("Prayer times.", false),
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
-            ("Call Mom.", false), ("Call Ahmed.", false), ("Yes.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
+            ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
+            ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
         };
         var lines = new System.Collections.Generic.List<string>();
@@ -222,6 +223,11 @@ internal static class Snapshot
                 lines.Add($"{text} -> {ex.GetType().Name}: {ex.Message}");
             }
         }
+        lines.Add("-- transcripts as Whisper writes them --");
+        foreach (var heard in new[] { "Yes. Call sho.", "Yes, yes.", "Yes, call him.", "Yeah, sure.", "OK.", "ايوه تمام",
+                     "No, don't call.", "Cancel.", "Yes. No.", "Calcia.", "Call sho.", "Callsho." })
+            lines.Add($"\"{heard}\" -> yes: {CallVoiceCommand.IsYes(heard)}, call: " +
+                      (CallVoiceCommand.TryParse(heard) is { } who ? CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")" : "-"));
         File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
         return 0;
     }
@@ -230,6 +236,7 @@ internal static class Snapshot
     [
         new() { Name = "Mom", OtherName = "ماما", Number = "1000" },
         new() { Name = "Ahmed", OtherName = "أحمد", Number = "2000" },
+        new() { Name = "sho", OtherName = "sho", Number = "3000" },
     ];
 
     private static async System.Threading.Tasks.Task<float[]?> Synthesize(string text, bool arabic)

@@ -228,6 +228,9 @@ public partial class MainWindow
         }
         if (!ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app))
         {
+            // A call waiting for "yes" and an answer that wasn't understood:
+            // ask again rather than treat it as some other command.
+            if (await AskAgainForPendingCallAsync(heard)) return;
             if (WidgetVoiceCommands.TryMatchLoosely(heard, out var looseCommand))
             {
                 Keeper.SetVoiceStatus("complete");

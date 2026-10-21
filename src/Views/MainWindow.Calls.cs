@@ -77,6 +77,24 @@ public partial class MainWindow
         return true;
     }
 
+    // While a call waits for "yes", an answer that wasn't understood asks
+    // the question again (the call keeps waiting). True when it did.
+    private async Task<bool> AskAgainForPendingCallAsync(string heard)
+    {
+        if (_pendingCall is not { } contact) return false;
+        if (DateTime.UtcNow > _pendingCallUntil)
+        {
+            _pendingCall = null;
+            return false;
+        }
+        _pendingCallUntil = DateTime.UtcNow + CallConfirmTime;
+        Keeper.SetVoiceStatus("failed");
+        ShowLabel($"Call {contact.Name}?", $"Heard: {heard} — say yes, or cancel", "📞", seconds: (int)CallConfirmTime.TotalSeconds);
+        await SpeakPushToTalkStepAsync($"I didn't catch that. Call {contact.Name}? Say yes, or cancel.",
+            $"ما فهمتش. أتصل ب{contact.OtherName ?? contact.Name}؟ قول ايوه، أو إلغاء.");
+        return true;
+    }
+
     // "Cancel" while a call waits: true when there was one to cancel.
     private bool CancelPendingCall()
     {

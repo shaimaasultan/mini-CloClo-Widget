@@ -24,19 +24,35 @@ internal static class CallVoiceCommand
         "ايوه", "ايوا", "اه", "نعم", "اكيد", "تمام", "ماشي", "اتصل", "كلمه", "كلمها", "يلا", "موافق",
     ];
 
-    // Used only while a call waits for confirmation, so a near miss ("بايوو"
-    // for "ايوه") is accepted: one sound away from a yes word of three or
-    // more sounds, with a stray leading ب or و dropped.
+    // Words that turn a reply into a no, whatever else it says.
+    private static readonly string[] NoWords =
+        ["no", "not", "don", "dont", "cancel", "stop", "wait", "لا", "لأ", "الغاء", "الغي", "بلاش", "استنى", "وقف"];
+
+    // Used only while a call waits for confirmation. Whisper rarely writes a
+    // bare "yes": it gives "Yes, yes.", "Yes, call him." or echoes the end of
+    // its hints ("Yes. Call sho."). So a short reply (at most six words)
+    // that starts with a yes word and has no "no" word in it is a yes. A
+    // near miss of a yes word ("بايوو" for "ايوه") counts too.
     internal static bool IsYes(string transcript)
     {
         if (transcript.Length > 160) return false;
         var phrase = ApprovedVoiceAppLauncher.CommandPhrase(transcript);
         if (Array.IndexOf(YesPhrases, phrase) >= 0) return true;
-        if (phrase.Contains(' ')) return false;
-        foreach (var word in new[] { phrase, phrase.Length > 3 && phrase[0] is 'ب' or 'و' ? phrase[1..] : phrase })
+        var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length is 0 or > 6 || words.Any(w => Array.IndexOf(NoWords, w) >= 0)) return false;
+        return IsYesWord(words[0]);
+    }
+
+    private static readonly string[] YesWords =
+        ["yes", "yeah", "yep", "yup", "ok", "okay", "sure", "confirm", "ايوه", "ايوا", "اه", "نعم", "اكيد", "تمام", "ماشي", "موافق", "يلا"];
+
+    private static bool IsYesWord(string word)
+    {
+        if (Array.IndexOf(YesWords, word) >= 0) return true;
+        foreach (var candidate in new[] { word, word.Length > 3 && word[0] is 'ب' or 'و' ? word[1..] : word })
         {
-            var key = ApprovedVoiceAppLauncher.SoundKey(word);
-            foreach (var yes in YesPhrases.Where(y => !y.Contains(' ')))
+            var key = ApprovedVoiceAppLauncher.SoundKey(candidate);
+            foreach (var yes in YesWords)
             {
                 var target = ApprovedVoiceAppLauncher.SoundKey(yes);
                 if (target.Length >= 3 && ApprovedVoiceAppLauncher.EditDistance(key, target) <= 1) return true;
@@ -77,7 +93,15 @@ internal static class CallVoiceCommand
             return name.Length > 0 ? name : null;
         }
         var loose = LooseLead(phrase);
-        return string.IsNullOrEmpty(loose) ? null : loose;
+        if (!string.IsNullOrEmpty(loose)) return loose;
+        // A short name run into the verb: "Call sho." heard as "Calcia".
+        // What follows "call"/"cal" is then matched against the contacts
+        // like any name, and still has to be confirmed with "yes".
+        if (!phrase.Contains(' '))
+            foreach (var verb in new[] { "call", "cal", "kol", "col" })
+                if (phrase.Length > verb.Length + 1 && phrase.StartsWith(verb, StringComparison.Ordinal))
+                    return phrase[verb.Length..];
+        return null;
     }
 
     // The saved contact with this name (or other name): the same spelling,
