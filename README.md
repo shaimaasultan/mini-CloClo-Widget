@@ -282,6 +282,16 @@ Debug builds have five test switches:
   the hands-free handshake — with a number it also dials it and checks the
   call outlives the disconnect.
 
+## License
+
+Mini CloClo's code and artwork are under the [MIT License](LICENSE),
+© 2026 Shaimaa Said Soltan — shaimaasultan@hotmail.com ·
+[github.com/shaimaasultan](https://github.com/shaimaasultan).
+
+The Quran text, its English meaning, the recitations, the azan and the speech
+model are others' work under their own terms — some for non-commercial use
+only — listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
 ## Credits
 
 Built from the full CloClo widget (`C:\cloclo-widget`). The Quran text is the
