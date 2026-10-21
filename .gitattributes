@@ -15,3 +15,4 @@ Assets/Quran/* -text
 *.mp3 binary
 *.wav binary
 docs/video/*.mp4 filter=lfs diff=lfs merge=lfs -text
+Assets/Recitations/**/*.mp3 filter=lfs diff=lfs merge=lfs -text

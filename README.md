@@ -55,11 +55,14 @@ it carries its own runtime.
 - **To remove it**: `scripts\Uninstall-MiniCloClo.cmd` (your settings are kept;
   `uninstall.ps1 -RemoveSettings` removes them too).
 
-**Quran recitations are not in git** (they aren't ours to redistribute). The
-installer packs whatever per-ayah MP3s are in `Assets\Recitations\<reciter>\`,
-named like everyayah.com's (`001001.mp3` is Al-Fatiha 1). On a fresh clone that
-folder is empty, so the Quran window is text only until you add them — or
-choose a folder of recitations from inside the Quran window.
+**Quran recitations:** Mishary Alafasy's recitation of **Al-Fatiha and
+Al-Baqara** (293 ayat, 57 MB, stored with Git LFS) comes with the project in
+`Assets\Recitations\Alafasy_64kbps\`. The installer packs every per-ayah MP3
+in `Assets\Recitations\<reciter>\`, named like everyayah.com's (`001001.mp3`
+is Al-Fatiha 1), into one file beside the app. To learn other surahs with
+sound, add their files to that folder (or a new reciter's folder) and run the
+installer again — or choose a folder of recitations from inside the Quran
+window. Ayat without a recording are shown as text.
 
 **First thing to set:** your city, for the prayer times. Click the 🕌 icon, or
 press Ctrl+Alt+M → *Prayer times and azan…*, and pick it from the list (or
@@ -284,7 +287,8 @@ Debug builds have five test switches:
 Built from the full CloClo widget (`C:\cloclo-widget`). The Quran text is the
 [Tanzil Project](https://tanzil.net)'s verified Uthmani text (CC BY 3.0) and
 the English meaning is Saheeh International's, as published by Tanzil, both
-unchanged. The recitations are Mishary Alafasy's, from everyayah.com, for
-personal use. The built-in azan is recited by Aaqib Azeez. Speech
+unchanged. The recitations are Mishary Alafasy's, from
+[everyayah.com](https://everyayah.com), included for personal, non-commercial
+use; all rights in them remain with the reciter. The built-in azan is recited by Aaqib Azeez. Speech
 recognition: [whisper.cpp](https://github.com/ggerganov/whisper.cpp) through
 Whisper.net.
