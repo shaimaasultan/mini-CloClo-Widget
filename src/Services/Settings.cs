@@ -298,7 +298,7 @@ public sealed class ContactSettings
 
     public ContactSettings Copy() => new() { Name = Name, OtherName = OtherName, Number = Number };
 
-    // "647 801 6063": read in groups, which is how people say numbers.
+    // "416 555 0123": read in groups, which is how people say numbers.
     public static string SpokenNumber(string number)
     {
         var digits = number.TrimStart('+');
