@@ -85,8 +85,20 @@ internal static class QuranVoiceAnswers
         "لا", "لأ", "لا لا", "ارجع", "رجوع", "غلط", "لا غلط", "مش كده", "لا مش كده", "لا ارجع",
     ];
 
-    internal static bool IsBack(string transcript) =>
-        Array.IndexOf(BackPhrases, ApprovedVoiceAppLauncher.CommandPhrase(transcript.Length > 160 ? "" : transcript)) >= 0;
+    private static readonly string[] BackWords = ["no", "nope", "back", "wrong", "لا", "ارجع", "رجوع", "غلط"];
+
+    // Whisper often repeats a short "لا" and adds a stray word after it
+    // ("لا. لا. لديك."): a short reply that starts with a back word counts
+    // too - unless it also says a number, so "no, five" answers 5.
+    internal static bool IsBack(string transcript)
+    {
+        var phrase = ApprovedVoiceAppLauncher.CommandPhrase(transcript.Length > 160 ? "" : transcript);
+        if (Array.IndexOf(BackPhrases, phrase) >= 0) return true;
+        var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length is >= 2 and <= 5 && Array.IndexOf(BackWords, words[0]) >= 0 &&
+               !words.Any(w => w.Any(char.IsAsciiDigit)) && Number(string.Join(' ', words.Skip(1))) == null &&
+               !IsAll(string.Join(' ', words.Skip(1)));
+    }
 
     internal static bool IsEnd(string transcript)
     {
