@@ -1,0 +1,18 @@
+{
+  "name": "news",
+  "otherName": "الأخبار",
+  "description": "download the latest news headlines",
+  "otherDescription": "يحمل آخر عناوين الأخبار",
+  "result": "read",
+  "timeoutSeconds": 60,
+  "settings": {
+    "englishFeed": "https://www.cbc.ca/webfeed/rss/rss-topstories",
+    "arabicFeed": "https://feeds.bbci.co.uk/arabic/rss.xml",
+    "count": "5"
+  },
+  "settingLabels": {
+    "englishFeed": "News feed (RSS) read when voice commands are in English",
+    "arabicFeed": "News feed (RSS) read when voice commands are in Arabic",
+    "count": "How many headlines (1 to 10)"
+  }
+}

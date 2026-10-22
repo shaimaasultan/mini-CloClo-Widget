@@ -18,12 +18,13 @@ internal static class PullVoiceCommand
     // often heard as "Paul" or "pool": with a tool's name after it, it counts.
     private static readonly string[] Leads =
     [
-        "pull the ", "pull my ", "pull ", "paul the ", "paul ", "pool the ", "pool ", "pol ",
+        "pull the ", "pull my ", "pull ",
         "update the ", "update my ", "update ", "refresh the ", "refresh ", "اسحب ", "حدث ", "جيب ",
     ];
-    // Leads that are only sound-alikes of "pull": an unknown name after them
-    // isn't a pull at all ("Paul Simon").
-    private static readonly string[] SoundAlikeLeads = ["paul the ", "paul ", "pool the ", "pool ", "pol "];
+    // "Pull" is often heard as a word that sounds the same - "Bull", "Paul",
+    // "pool", "poll". With a tool's name after it, it counts; with any other
+    // word it isn't a pull at all ("Paul Simon", "bull market").
+    private static readonly string PullSound = ApprovedVoiceAppLauncher.SoundKey("pull");
     private static readonly string[] Alone = ["pull", "pull it", "pull now", "اسحب", "حدث", "تحديث"];
     private static readonly string[] ListPhrases =
     [
@@ -52,8 +53,13 @@ internal static class PullVoiceCommand
             var name = phrase[lead.Length..].Trim();
             if (name.Length == 0) return new PullRequest(tools.Count == 1 ? tools[0] : null, null);
             var tool = Match(name, tools);
-            if (tool == null && Array.IndexOf(SoundAlikeLeads, lead) >= 0) return null;
             return new PullRequest(tool, tool == null ? name : null);
+        }
+        var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2 && !TranscriptCleanup.ContainsArabic(words[0]) && ApprovedVoiceAppLauncher.SoundKey(words[0]) == PullSound)
+        {
+            var rest = string.Join(' ', words[(words[1] is "the" or "my" && words.Length > 2 ? 2 : 1)..]);
+            if (Match(rest, tools) is { } heardTool) return new PullRequest(heardTool, null);
         }
         return null;
     }

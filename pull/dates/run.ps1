@@ -19,6 +19,16 @@ $method = "$($settings.islamicMethod)".Trim()
 if ($method -notin 'HJCoSA', 'UAQ', 'DIYANET', 'MATHEMATICAL', 'None') { $method = 'HJCoSA' }
 $years = 2
 if (-not [int]::TryParse("$($settings.years)", [ref]$years) -or $years -lt 1 -or $years -gt 5) { $years = 2 }
+# Empty: the country from Windows' region setting (not the PC's location);
+# "none": no public holidays.
+if ($country -eq '' -or $country -eq 'auto') {
+    # Windows' "Country or region" setting is kept in the registry (Geo\Name);
+    # the region of the language format (often United States) is the fallback.
+    $country = "$((Get-ItemProperty 'HKCU:\Control Panel\International\Geo' -ErrorAction SilentlyContinue).Name)"
+    if ($country -notmatch '^[A-Za-z]{2}$') {
+        try { $country = [Globalization.RegionInfo]::CurrentRegion.TwoLetterISORegionName } catch { $country = '' }
+    }
+}
 if ($country -notmatch '^[A-Za-z]{2}$') { $country = '' }
 if ($region -notmatch '^[A-Za-z]{2}-[A-Za-z0-9]{1,3}$') { $region = '' }
 

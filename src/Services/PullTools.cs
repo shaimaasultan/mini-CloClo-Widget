@@ -128,13 +128,15 @@ internal static class PullTools
     internal enum Outcome { Done, Failed, TimedOut, NoResult }
 
     // Runs the tool's script, hidden, with its settings file and the result
-    // file to write. Returns the result file's path when it finished well.
-    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, CancellationToken cancel = default)
+    // file to write. The settings file also says the voice commands'
+    // language ("en" or "ar"), so a tool can fetch in that language.
+    // Returns the result file's path when it finished well.
+    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, bool arabic = false, CancellationToken cancel = default)
     {
         Directory.CreateDirectory(WorkFolder);
         var settingsFile = Path.Combine(WorkFolder, tool.Id + ".settings.json");
         var resultFile = Path.Combine(WorkFolder, tool.Id + ".result.json");
-        File.WriteAllText(settingsFile, JsonSerializer.Serialize(new { settings }, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(settingsFile, JsonSerializer.Serialize(new { language = arabic ? "ar" : "en", settings }, new JsonSerializerOptions { WriteIndented = true }));
         if (File.Exists(resultFile)) File.Delete(resultFile);
 
         var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))

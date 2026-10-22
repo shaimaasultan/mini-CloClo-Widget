@@ -114,6 +114,7 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Again / قولها تاني | Says the last answer to your own question again |
 | What topics do I have? / مواضيعي | Lists your topics |
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
+| Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
@@ -243,11 +244,24 @@ answers — or, for tools that make one, read aloud.
    ("Ramadan date"). "Again" repeats it. If something goes wrong, Keeper says
    what (no internet, too slow, nothing returned).
 
+The tools that come with it:
+
+- **dates** — Islamic dates and public holidays, added to Questions and
+  answers. Settings: country (empty: Windows' region, e.g. `CA`; `none`: no
+  holidays), province (e.g. `CA-ON`, for regional holidays such as the Civic
+  Holiday), the Islamic calendar method, and how many years.
+- **news** — the latest headlines, read aloud: *"Here it is. CBC Top
+  Stories. 5 items. 1: …"* ("again" repeats them, "stop" stops). Settings:
+  the English feed (CBC Top Stories) and the Arabic feed (BBC Arabic), used by
+  the voice commands' language, and how many headlines (1–10). Any RSS or
+  Atom feed address (`https://…`) works.
+
+"Pull" is often heard as "Bull" or "Paul": a word that sounds like it,
+followed by a tool's name, counts.
+
 **Pull commands are off until you turn them on**, because the tools go
 online: menu → **Pull tools…** → *Allow pull commands (they go online)*. The
-same window sets each tool's settings — for **dates**: your country (e.g.
-`CA`), province (e.g. `CA-ON`), the Islamic calendar method and how many
-years.
+same window sets each tool's settings.
 
 **Mini CloClo itself still never goes online.** It only starts a tool from
 the `pull` folder beside the app — never anything you said — after you say
@@ -259,7 +273,8 @@ PowerShell scripts.
 `tool.json` — its spoken name (`name`, `otherName`), what it goes online for
 (`description`, `otherDescription`), `"result": "import"` or `"read"`,
 `timeoutSeconds`, and its `settings` with `settingLabels` — and `run.ps1`,
-which is run as `run.ps1 <settings file> <result file>`. An `import` tool
+which is run as `run.ps1 <settings file> <result file>` (the settings file
+also holds `"language": "en"` or `"ar"`, the voice commands' language). An `import` tool
 writes a list of topics (the same file *Import…* reads); a `read` tool
 writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 (up to 10 items, read aloud in order).

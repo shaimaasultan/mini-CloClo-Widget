@@ -123,7 +123,7 @@ public partial class MainWindow
         {
             ShowLabel($"Pulling {Said(tool)}…", "Running the tool", "⬇", seconds: tool.TimeoutSeconds);
             await Voice.SayAndWaitAsync($"Running the {Said(tool)} tool.", $"بشغل أداة {SaidArabic(tool)}.", TimeSpan.FromSeconds(6));
-            var (outcome, file) = await PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, _settings.PullToolSettings));
+            var (outcome, file) = await PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, _settings.PullToolSettings), _settings.VoiceCommandsInArabic);
             if (_closing) return;
             if (outcome != PullTools.Outcome.Done || file == null)
             {

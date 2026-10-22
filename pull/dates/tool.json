@@ -12,7 +12,7 @@
     "years": "2"
   },
   "settingLabels": {
-    "country": "Country code for public holidays, for example CA or EG (empty: no holidays)",
+    "country": "Country code for public holidays, for example CA or EG (empty: Windows' region; none: no holidays)",
     "region": "Province or state, for example CA-ON (empty: the whole country)",
     "islamicMethod": "Islamic calendar: HJCoSA (Saudi), UAQ, DIYANET, MATHEMATICAL, or None",
     "years": "How many years, from this one (1 to 5)"
