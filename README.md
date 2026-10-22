@@ -247,9 +247,11 @@ answers — or, for tools that make one, read aloud.
 The tools that come with it:
 
 - **dates** — Islamic dates and public holidays, added to Questions and
-  answers. Settings: country (empty: Windows' region, e.g. `CA`; `none`: no
-  holidays), province (e.g. `CA-ON`, for regional holidays such as the Civic
-  Holiday), the Islamic calendar method, and how many years.
+  answers. Left empty, the country and province come from your
+  **prayer-times city** (Mississauga → Canada, Ontario: national holidays
+  plus Family Day and the Civic Holiday), else from Windows' "Country or
+  region" setting. Settings: country (e.g. `CA`; `none`: no holidays),
+  province (e.g. `CA-ON`), the Islamic calendar method, and how many years.
 - **news** — the latest headlines, read aloud: *"Here it is. CBC Top
   Stories. 5 items. 1: …"* ("again" repeats them, "stop" stops). Settings:
   the English feed (CBC Top Stories) and the Arabic feed (BBC Arabic), used by
@@ -273,8 +275,11 @@ PowerShell scripts.
 `tool.json` — its spoken name (`name`, `otherName`), what it goes online for
 (`description`, `otherDescription`), `"result": "import"` or `"read"`,
 `timeoutSeconds`, and its `settings` with `settingLabels` — and `run.ps1`,
-which is run as `run.ps1 <settings file> <result file>` (the settings file
-also holds `"language": "en"` or `"ar"`, the voice commands' language). An `import` tool
+which is run as `run.ps1 <settings file> <result file>`. The settings file
+holds the tool's `settings`, `"language": "en"` or `"ar"` (the voice
+commands' language) and `"place"`: the prayer-times city, its country code
+and, where holidays differ by region, its province or state
+(`{ "city": "Mississauga", "country": "CA", "region": "CA-ON" }`). An `import` tool
 writes a list of topics (the same file *Import…* reads); a `read` tool
 writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 (up to 10 items, read aloud in order).
