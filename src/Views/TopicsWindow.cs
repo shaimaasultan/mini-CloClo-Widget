@@ -167,20 +167,7 @@ internal sealed class TopicsWindow : Window
     }
 
     // The words already used by other topics and actions, so a word is used once.
-    private string? UsedElsewhere(string word, object? except)
-    {
-        var key = TranscriptCleanup.MatchingKey(word);
-        foreach (var topic in _topics)
-        {
-            if (!ReferenceEquals(topic, except) && Keys(topic.Name, topic.OtherName).Contains(key)) return $"\"{word}\" is already the topic {topic.Name}.";
-            foreach (var action in topic.Actions)
-                if (!ReferenceEquals(action, except) && Keys(action.Word, action.OtherWord).Contains(key)) return $"\"{word}\" is already used in {topic.Name}.";
-        }
-        return null;
-    }
-
-    private static IEnumerable<string> Keys(string first, string? second) =>
-        new[] { first, second }.Where(w => !string.IsNullOrWhiteSpace(w)).Select(w => TranscriptCleanup.MatchingKey(w!));
+    private string? UsedElsewhere(string word, object? except) => TopicImport.UsedElsewhere(_topics, word, except);
 
     private void AddTopic()
     {
@@ -279,23 +266,9 @@ internal sealed class TopicsWindow : Window
     {
         try
         {
-            if (new FileInfo(path).Length > 1_000_000) throw new InvalidDataException("too large");
-            var imported = JsonSerializer.Deserialize<List<TopicSettings>>(File.ReadAllText(path)) ?? new();
-            int added = 0, replaced = 0;
-            foreach (var topic in imported.Select(t => t?.ValidateAndNormalize()).Where(t => t != null).Cast<TopicSettings>())
-            {
-                // A topic with the same name is replaced (fresh dates from
-                // tools\Get-CalendarTopics.ps1 replace "Islamic dates").
-                var old = _topics.FirstOrDefault(t => string.Equals(t.Name, topic.Name, StringComparison.OrdinalIgnoreCase));
-                var index = old != null ? _topics.IndexOf(old) : _topics.Count;
-                if (old != null) _topics.Remove(old);
-                else if (_topics.Count >= TopicSettings.MaxTopics) break;
-                // Words that clash with commands or each other are left out.
-                topic.Actions = topic.Actions.Where(a => TopicVoiceCommand.Clash(a.Word) == null && UsedElsewhere(a.Word, null) == null).ToList();
-                if (TopicVoiceCommand.Clash(topic.Name) != null || UsedElsewhere(topic.Name, null) != null) topic.Name += " (imported)";
-                _topics.Insert(index, topic);
-                if (old != null) replaced++; else added++;
-            }
+            // A topic with the same name is replaced (fresh dates from
+            // tools\Get-CalendarTopics.ps1 replace "Islamic dates").
+            var (added, replaced, _) = TopicImport.Merge(_topics, TopicImport.ReadFile(path));
             _topicList.SelectedIndex = _topics.Count > 0 ? 0 : -1;
             _status.Text = $"Imported: {added} new topics, {replaced} replaced. Choose Save and close to keep them.";
             Voice.Say($"Imported {added} new topics, and replaced {replaced}. Choose Save and close to keep them.",

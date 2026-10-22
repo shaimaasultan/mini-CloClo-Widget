@@ -27,7 +27,7 @@
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- tools\ holds separate projects (the promo video maker), not app code. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**;pull\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -56,6 +56,16 @@
     <!-- The built-in azan recordings, in an Azan folder beside the exe
          (AzanLibrary). Any MP3 or WAV put in Assets\Azan is included. -->
     <Content Include="Assets\Azan\*.mp3;Assets\Azan\*.wav" Link="Azan\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Pull tools (#35): pull\<name>\tool.json and run.ps1, installed in a
+       pull folder beside the exe. The dates tool runs the calendar script
+       from tools\, copied in beside it. -->
+  <ItemGroup>
+    <Content Include="pull\**\*" Link="pull\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="tools\Get-CalendarTopics.ps1" Link="pull\dates\Get-CalendarTopics.ps1"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

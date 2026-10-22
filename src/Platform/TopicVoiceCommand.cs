@@ -160,6 +160,7 @@ internal static class TopicVoiceCommand
         if (WidgetVoiceCommands.TryMatch(word, out var command)) return $"\"{word.Trim()}\" is already a command ({command}).";
         if (Array.IndexOf(ListPhrases, ApprovedVoiceAppLauncher.CommandPhrase(word)) >= 0) return $"\"{word.Trim()}\" is already a command (topics).";
         if (ApprovedVoiceAppLauncher.TryMatchHeldCommand(word, out var app)) return $"\"{word.Trim()}\" already opens an app ({app}).";
+        if (PullVoiceCommand.IsPullPhrase(word)) return $"\"{word.Trim()}\" is already a command (pull).";
         if (ApprovedVoiceAppLauncher.IsCancelCommand(word) || ApprovedVoiceAppLauncher.IsShutdownCommand(word)) return $"\"{word.Trim()}\" is already a command.";
         // "Call ..." itself; a word that only sounds like a call verb
         // ("Dhul Hijjah") is fine, since such a call needs a saved contact.

@@ -77,6 +77,10 @@ public class WidgetSettings
     // person keeps or removes stays that way.
     public List<TopicSettings> Topics { get; set; } = new();
     public bool TopicsSeeded { get; set; }
+    // "Pull" (#35): off until turned on, since the tools go online; and the
+    // person's own values for each tool's settings, by tool folder name.
+    public bool AllowPullCommands { get; set; }
+    public Dictionary<string, Dictionary<string, string>> PullToolSettings { get; set; } = new();
 
     public static double RoundCoordinate(double value) => Math.Round(value, 2);
 
@@ -173,6 +177,13 @@ public class WidgetSettings
             .Where(topic => topic != null)
             .Cast<TopicSettings>()
             .ToList();
+        PullToolSettings = (PullToolSettings ?? new())
+            .Where(tool => tool.Value != null && System.Text.RegularExpressions.Regex.IsMatch(tool.Key, "^[a-z0-9-]{1,30}$"))
+            .Take(30)
+            .ToDictionary(tool => tool.Key, tool => tool.Value
+                .Where(s => System.Text.RegularExpressions.Regex.IsMatch(s.Key, "^[A-Za-z][A-Za-z0-9]{0,29}$") && PullTools.IsSettingValue(s.Value))
+                .Take(20)
+                .ToDictionary(s => s.Key, s => s.Value));
         CustomReminders = (CustomReminders ?? new List<CustomReminderSettings>())
             .Take(MaxCustomReminders)
             .Select(reminder => reminder?.ValidateAndNormalize())

@@ -230,3 +230,54 @@ internal static class TopicAnswers
             : ($"Your topics: {string.Join(", ", topics.Select(t => t.Name))}. Say a topic's name to hear what's in it.",
                $"مواضيعك: {string.Join("، ", topics.Select(t => t.OtherName ?? t.Name))}. قول اسم الموضوع عشان تسمع اللي فيه.");
 }
+
+// Bringing topics in from a file - the window's Import... and "pull" (#35):
+// each topic is checked like a typed one, a topic with the same name is
+// replaced, and words that clash with commands or other words are left out.
+internal static class TopicImport
+{
+    internal const long MaxFileBytes = 1_000_000;
+
+    internal static List<TopicSettings> ReadFile(string path)
+    {
+        if (new System.IO.FileInfo(path).Length > MaxFileBytes) throw new System.IO.InvalidDataException("too large");
+        var imported = System.Text.Json.JsonSerializer.Deserialize<List<TopicSettings>>(System.IO.File.ReadAllText(path)) ?? new();
+        return imported.Select(t => t?.ValidateAndNormalize()).Where(t => t != null).Cast<TopicSettings>().ToList();
+    }
+
+    // Merges into topics; returns the topics added or replaced, in order.
+    internal static (int Added, int Replaced, List<TopicSettings> Changed) Merge(IList<TopicSettings> topics, IEnumerable<TopicSettings> imported)
+    {
+        int added = 0, replaced = 0;
+        var changed = new List<TopicSettings>();
+        foreach (var topic in imported)
+        {
+            var old = topics.FirstOrDefault(t => string.Equals(t.Name, topic.Name, StringComparison.OrdinalIgnoreCase));
+            var index = old != null ? topics.IndexOf(old) : topics.Count;
+            if (old != null) topics.Remove(old);
+            else if (topics.Count >= TopicSettings.MaxTopics) break;
+            topic.Actions = topic.Actions.Where(a => TopicVoiceCommand.Clash(a.Word) == null && UsedElsewhere(topics, a.Word, null) == null).ToList();
+            if (TopicVoiceCommand.Clash(topic.Name) != null || UsedElsewhere(topics, topic.Name, null) != null) topic.Name += " (imported)";
+            topics.Insert(index, topic);
+            changed.Add(topic);
+            if (old != null) replaced++; else added++;
+        }
+        return (added, replaced, changed);
+    }
+
+    // Why a word is already taken by another topic or word; null when free.
+    internal static string? UsedElsewhere(IEnumerable<TopicSettings> topics, string word, object? except)
+    {
+        var key = TranscriptCleanup.MatchingKey(word);
+        foreach (var topic in topics)
+        {
+            if (!ReferenceEquals(topic, except) && Keys(topic.Name, topic.OtherName).Contains(key)) return $"\"{word}\" is already the topic {topic.Name}.";
+            foreach (var action in topic.Actions)
+                if (!ReferenceEquals(action, except) && Keys(action.Word, action.OtherWord).Contains(key)) return $"\"{word}\" is already used in {topic.Name}.";
+        }
+        return null;
+    }
+
+    private static IEnumerable<string> Keys(string first, string? second) =>
+        new[] { first, second }.Where(w => !string.IsNullOrWhiteSpace(w)).Select(w => TranscriptCleanup.MatchingKey(w!));
+}

@@ -147,6 +147,102 @@ internal static class Snapshot
         return topics.Select(t => t.ValidateAndNormalize()!).ToList();
     }
 
+    // "MiniCloClo.exe --pull-test <report file> [real]": pull tools (#35) on
+    // local test tools that don't go online - one that imports, one that
+    // reads, one that fails, one that runs too long, one that writes nothing
+    // - and the spoken commands. With "real", the installed dates tool also
+    // runs once (that one goes online).
+    public static int PullTest(string reportPath, bool real)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        var folder = Path.Combine(Path.GetTempPath(), "MiniCloClo-pull-test");
+        try
+        {
+            if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+            void Tool(string id, string result, int timeout, string script)
+            {
+                var dir = Directory.CreateDirectory(Path.Combine(folder, id)).FullName;
+                File.WriteAllText(Path.Combine(dir, "tool.json"),
+                    $"{{\"name\": \"{id}\", \"otherName\": \"{id} بالعربي\", \"description\": \"test {id}\", \"result\": \"{result}\", \"timeoutSeconds\": {timeout}, \"settings\": {{ \"word\": \"Mango\" }}}}",
+                    new System.Text.UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir, "run.ps1"), "param($SettingsFile, $ResultFile)\n$s = (Get-Content -Raw -Encoding UTF8 $SettingsFile | ConvertFrom-Json).settings\n" + script,
+                    new System.Text.UTF8Encoding(true));
+            }
+            Tool("fruits", "import", 30, "$json = '[{\"Name\":\"Fruits\",\"Actions\":[{\"Word\":\"' + $s.word + '\",\"Kind\":\"text\",\"Text\":\"A sweet fruit.\"},{\"Word\":\"Time\",\"Kind\":\"text\",\"Text\":\"clashes\"}]}]'\n[IO.File]::WriteAllText($ResultFile, $json)");
+            Tool("news", "read", 30, "[IO.File]::WriteAllText($ResultFile, '{\"title\":\"Test headlines\",\"items\":[{\"text\":\"First headline.\"},{\"text\":\"Second headline.\",\"otherText\":\"الخبر التاني.\"}]}')");
+            Tool("broken", "import", 30, "exit 3");
+            Tool("slow", "import", 10, "Start-Sleep -Seconds 60");
+            Tool("silent", "read", 30, "exit 0");
+            Directory.CreateDirectory(Path.Combine(folder, "Bad Name!"));
+            PullTools.FolderOverride = folder;
+
+            var tools = PullTools.Load();
+            lines.Add("tools found: " + string.Join(", ", tools.Select(t => $"{t.Id} ({t.Result}, {t.TimeoutSeconds}s, settings: {string.Join(";", t.Settings.Select(kv => kv.Key + "=" + kv.Value))})")));
+            var own = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>
+            {
+                ["fruits"] = new() { ["word"] = "Papaya", ["unknown"] = "ignored" },
+            };
+            foreach (var tool in tools)
+            {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                var (outcome, file) = PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, own)).GetAwaiter().GetResult();
+                var line = $"{tool.Id}: {outcome} in {clock.Elapsed.TotalSeconds:0.0} s";
+                if (file != null && tool.Result == PullTool.ImportResult)
+                {
+                    var topics = SampleTopics(DateTime.Today);
+                    var (added, replaced, changed) = TopicImport.Merge(topics, TopicImport.ReadFile(file));
+                    line += $" -> imported: {added} added, {replaced} replaced: " + string.Join(" | ", changed.Select(t => TopicAnswers.TopicContents(t).English));
+                }
+                else if (file != null && PullTools.ReadReading(file) is { } reading)
+                    line += $" -> read: {reading.Title}: " + string.Join(" | ", reading.Items.Select(i => i.Text + (i.OtherText != null ? " / " + i.OtherText : "")));
+                lines.Add(line);
+            }
+            lines.Add("-- what is said --");
+            foreach (var heard in new[] { "Pull fruits.", "Pull the news.", "Pull.", "Pull nooz.", "Pull weather.", "What can I pull?", "اسحب news", "Update fruits.", "Pull dates.", "Pull it.", "Ramadan date.", "Paul nooz.", "Paul Simon.", "Pool fruits." })
+            {
+                var request = PullVoiceCommand.TryParse(heard, tools);
+                lines.Add($"\"{heard}\" -> " + request switch
+                {
+                    PullVoiceCommand.ListRequest => "list of tools",
+                    PullVoiceCommand.PullRequest { Tool: { } t } => "pull " + t.Id,
+                    PullVoiceCommand.PullRequest { Unknown: { } u } => $"no tool by that name ({u})",
+                    PullVoiceCommand.PullRequest => "which one?",
+                    _ => "-",
+                });
+            }
+            foreach (var word in new[] { "Pull", "Pull news", "Update", "Mango" })
+                lines.Add($"own word \"{word}\" -> {TopicVoiceCommand.Clash(word) ?? "free"}");
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"{ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            PullTools.FolderOverride = null;
+        }
+        if (real)
+        {
+            var dates = PullTools.Load().FirstOrDefault(t => t.Id == "dates");
+            lines.Add($"-- the installed dates tool: {(dates == null ? "not found" : dates.Folder)}");
+            if (dates != null)
+            {
+                var settings = PullTools.EffectiveSettings(dates, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>> { ["dates"] = new() { ["country"] = "CA", ["region"] = "CA-ON" } });
+                var (outcome, file) = PullTools.RunAsync(dates, settings).GetAwaiter().GetResult();
+                lines.Add($"dates: {outcome}");
+                if (file != null)
+                {
+                    var topics = SampleTopics(DateTime.Today);
+                    var (added, replaced, changed) = TopicImport.Merge(topics, TopicImport.ReadFile(file));
+                    lines.Add($"imported: {added} added, {replaced} replaced");
+                    foreach (var topic in changed) lines.Add("  " + TopicAnswers.TopicContents(topic).English);
+                }
+            }
+        }
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --topics-test <report file>": the answers and the
     // matching of questions and answers, on sample topics.
     public static int TopicsTest(string reportPath, string? importFile = null)
@@ -338,22 +434,24 @@ internal static class Snapshot
     // "MiniCloClo.exe --voice-test <report file>": speaks each phrase with a
     // Windows voice into memory, recognizes it as a voice command would be,
     // and writes what was heard and which command it matched.
-    public static int VoiceTest(string reportPath)
+    // only: run just the spoken phrases containing this text (quicker).
+    public static int VoiceTest(string reportPath, string? only = null)
     {
         var phrases = new (string Text, bool Arabic)[]
         {
             ("What time is it?", false), ("What's the date?", false), ("Next prayer.", false), ("Prayer times.", false),
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
-            ("Ramadan.", false), ("When is Eid al-Adha?", false), ("How many days until Ramadan?", false), ("Civic.", false), ("What topics do I have?", false), ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
+            ("Pull dates.", false), ("Pull the dates.", false), ("What can I pull?", false), ("Ramadan.", false), ("When is Eid al-Adha?", false), ("How many days until Ramadan?", false), ("Civic.", false), ("What topics do I have?", false), ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
             ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("No.", false), ("Go back.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
-            ("رمضان", true), ("رمضان امتى؟", true), ("فاضل قد ايه على العيد؟", true), ("الحج", true), ("مواضيعي", true), ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
+            ("اسحب التواريخ", true), ("حدث التواريخ", true), ("رمضان", true), ("رمضان امتى؟", true), ("فاضل قد ايه على العيد؟", true), ("الحج", true), ("مواضيعي", true), ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
             ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
             ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true), ("نعم", true), ("نعم.", true), ("نعم، اتصل", true), ("نعم نعم", true), ("لا", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
         };
         var lines = new System.Collections.Generic.List<string>();
         var topics = SampleTopics(DateTime.Today);
+        var pullTools = PullTools.Load();
         static string TopicLabel(TopicVoiceCommand.Match match) => match switch
         {
             TopicVoiceCommand.ActionMatch a => a.Action.Word,
@@ -363,6 +461,7 @@ internal static class Snapshot
         };
         foreach (var (text, arabic) in phrases)
         {
+            if (only != null && !text.Contains(only, StringComparison.OrdinalIgnoreCase)) continue;
             try
             {
                 var samples = Synthesize(text, arabic).GetAwaiter().GetResult();
@@ -378,6 +477,7 @@ internal static class Snapshot
                     : CallVoiceCommand.IsYes(heard) ? "yes (confirms a call)"
                     : WidgetVoiceCommands.TryMatch(heard, out var command) ? "widget:" + command
                     : TopicVoiceCommand.TryMatch(heard, topics, loose: false) is { } topicMatch ? "topic:" + TopicLabel(topicMatch)
+                    : PullVoiceCommand.TryParse(heard, pullTools) is { } pull ? "pull:" + (pull is PullVoiceCommand.PullRequest { Tool: { } pulled } ? pulled.Id : pull is PullVoiceCommand.ListRequest ? "list" : "which one")
                     : ApprovedVoiceAppLauncher.IsShutdownCommand(heard) ? "shutdown"
                     : ApprovedVoiceAppLauncher.IsCancelCommand(heard) ? "cancel/stop"
                     : ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app) ? "app:" + app

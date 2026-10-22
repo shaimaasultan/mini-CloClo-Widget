@@ -113,6 +113,7 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Ramadan date / تاريخ رمضان (any of your own words) | Answers with what you entered, or the next date ([Questions and answers](#questions-and-answers)) |
 | Again / قولها تاني | Says the last answer to your own question again |
 | What topics do I have? / مواضيعي | Lists your topics |
+| Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
@@ -226,6 +227,42 @@ public holidays ([Nager.Date](https://date.nager.at)). Import it with
 *Import…*: it replaces *Islamic dates* with the published dates, and adds
 *Public holidays*. Mini CloClo itself still never goes online — only this
 script does, when you run it; run it again each year.
+
+## Pull
+
+**"Pull dates"** / **"اسحب التواريخ"** fetches fresh data by voice, with no
+window: a **pull tool** goes online, and its result is added to Questions and
+answers — or, for tools that make one, read aloud.
+
+1. Say **"pull dates"** ("what can I pull?" lists the tools; "pull" alone
+   works when there is one).
+2. Keeper asks first: *"Pull dates? This goes online to download Islamic
+   dates and public holidays. Talk to me again and say yes, or cancel."*
+3. *"Running the dates tool."* … *"Importing the file."* … *"Import done."* —
+   then the topics added or updated and their words, ready to ask about
+   ("Ramadan date"). "Again" repeats it. If something goes wrong, Keeper says
+   what (no internet, too slow, nothing returned).
+
+**Pull commands are off until you turn them on**, because the tools go
+online: menu → **Pull tools…** → *Allow pull commands (they go online)*. The
+same window sets each tool's settings — for **dates**: your country (e.g.
+`CA`), province (e.g. `CA-ON`), the Islamic calendar method and how many
+years.
+
+**Mini CloClo itself still never goes online.** It only starts a tool from
+the `pull` folder beside the app — never anything you said — after you say
+yes, and reads the file the tool writes. Its own network check and the
+firewall rules for `MiniCloClo.exe` are unchanged; the tools are separate
+PowerShell scripts.
+
+**Adding a tool** (later: news, trends…): a folder `pull\<name>\` with
+`tool.json` — its spoken name (`name`, `otherName`), what it goes online for
+(`description`, `otherDescription`), `"result": "import"` or `"read"`,
+`timeoutSeconds`, and its `settings` with `settingLabels` — and `run.ps1`,
+which is run as `run.ps1 <settings file> <result file>`. An `import` tool
+writes a list of topics (the same file *Import…* reads); a `read` tool
+writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
+(up to 10 items, read aloud in order).
 
 ## What it does on its own
 
@@ -344,7 +381,9 @@ dropped after each command.
   the firewall rules.
 - `tools/Get-CalendarTopics.ps1` (and `.cmd`) — downloads published Islamic
   dates and public holidays into a file to import (the one part that goes
-  online, run by hand).
+  online, run by hand or by "pull dates").
+- `pull/` — the pull tools, installed beside the app: `pull/dates/` runs
+  the calendar script with the settings from *Pull tools…*.
 - `tools/PromoVideo/` — makes the promo videos, offline: scenes drawn with the
   app's own avatar, narration by a Windows voice, encoded by Windows.
   `PromoVideo.exe <output.mp4>` for English, add `--arabic` for Arabic. It
@@ -364,6 +403,11 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--pull-test <file> [real]` runs local test pull tools (import, read, a
+  failure, a time-out, no result — none goes online) and checks what is said;
+  with `real`, the dates tool also runs once.
+- `--voice-test <file> [text]` runs only the spoken phrases containing that
+  text.
 - `--load-trace <file>` records which part of the app loads any networking
   library (only WPF's startup and Windows' speech voices do, and none of them
   connects anywhere).

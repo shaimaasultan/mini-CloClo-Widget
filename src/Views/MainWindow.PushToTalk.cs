@@ -211,13 +211,15 @@ public partial class MainWindow
         }
         // "Yes" to a "call Mom?" question.
         if (!_shutdownAwaitingClose && TryConfirmPendingCall(heard)) return;
+        // "Yes" to a "pull dates?" question.
+        if (!_shutdownAwaitingClose && TryConfirmPendingPull(heard)) return;
         // "No" / "back" to what Keeper read back during the surah questions -
         // before "no" is taken as cancel and "back" as "previous ayah".
         if (!_shutdownAwaitingClose && _pendingCall == null && await TryGoBackInQuranDialogAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsCancelCommand(heard))
         {
             if (await CancelShutdownByUserAsync()) return;
-            if (CancelPendingCall() || CancelQuranDialog())
+            if (CancelPendingCall() || CancelPendingPull() || CancelQuranDialog())
             {
                 Keeper.SetVoiceStatus("complete");
                 return;
@@ -249,6 +251,8 @@ public partial class MainWindow
         // The person's own questions first: their words can't be built-in
         // commands (saving refuses them), so nothing is taken from those.
         if (TryAnswerTopic(heard, loose: false)) return;
+        // "Pull dates": runs a pull tool, after "yes".
+        if (TryPullCommand(heard)) return;
         if (WidgetVoiceCommands.TryMatch(heard, out var command))
         {
             // "A surah" may be "Ashura": an own word that sounds the same wins.
@@ -262,6 +266,7 @@ public partial class MainWindow
             // A call waiting for "yes" and an answer that wasn't understood:
             // ask again rather than treat it as some other command.
             if (await AskAgainForPendingCallAsync(heard)) return;
+            if (AskAgainForPendingPull(heard)) return;
             // An action word one or two sounds off ("Ramadhan").
             if (TryAnswerTopic(heard, loose: true)) return;
             if (WidgetVoiceCommands.TryMatchLoosely(heard, out var looseCommand))
