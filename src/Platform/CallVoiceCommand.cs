@@ -71,22 +71,18 @@ internal static class CallVoiceCommand
 
     private static readonly string[] Verbs = ["call", "phone", "dial", "ring", "اتصل", "كلم", "كلملي", "رن"];
 
-    // "Call ..." with the verb misheard by a sound ("اتصلر بأحمد"): the
-    // first word sounds like a call verb. Returns the words after it. split:
-    // the verb was heard as two words ("اي تصلار بأحمد", "إتو صلاة بماما"),
-    // which - like a name run into the verb - counts only when the rest
-    // names a saved contact, since "اي صلاة" is no call.
-    private static string? LooseLead(string phrase, out bool split)
+    // "Call ..." with the verb misheard by a sound ("اتصلر بأحمد"), or heard
+    // as two words ("اي تصلار بأحمد", "إتو صلاة بماما"). Returns the words
+    // after it. Like a name run into the verb, this counts only when the
+    // rest names a saved contact: "Dhul Hijjah" sounds like "dial Hijjah",
+    // and "اي صلاة" is no call.
+    private static string? LooseLead(string phrase)
     {
-        split = false;
         var words = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < 2) return null;
         if (SoundsLikeVerb(words[0])) return string.Join(' ', words[1..]);
         if (words.Length >= 3 && TranscriptCleanup.ContainsArabic(words[0]) && SoundsLikeVerb(words[0] + words[1]))
-        {
-            split = true;
             return string.Join(' ', words[2..]);
-        }
         return null;
     }
 
@@ -105,10 +101,10 @@ internal static class CallVoiceCommand
     // The name after "call ...", or null when it isn't a call command.
     internal static string? TryParse(string transcript) => TryParse(transcript, out _);
 
-    // joined: the name was split off a single word ("Calcia" → "cia"), or the
-    // verb was heard as two words ("اي تصلار"); either only counts as a call
-    // when the name then matches a saved contact - otherwise "Calculator"
-    // would be a call to "culator".
+    // joined: the verb was only a sound-alike ("dhul", "اي تصلار") or the
+    // name was split off a single word ("Calcia" → "cia"); either only counts
+    // as a call when the name then matches a saved contact - otherwise
+    // "Calculator" would be a call to "culator".
     internal static string? TryParse(string transcript, out bool joined)
     {
         joined = false;
@@ -122,8 +118,12 @@ internal static class CallVoiceCommand
                 if (name.StartsWith(filler, StringComparison.Ordinal)) name = name[filler.Length..];
             return name.Length > 0 ? name : null;
         }
-        var loose = LooseLead(phrase, out joined);
-        if (!string.IsNullOrEmpty(loose)) return loose;
+        var loose = LooseLead(phrase);
+        if (!string.IsNullOrEmpty(loose))
+        {
+            joined = true;
+            return loose;
+        }
         // A short name run into the verb: "Call sho." heard as "Calcia".
         // What follows "call"/"cal" is then matched against the contacts
         // like any name, and still has to be confirmed with "yes".

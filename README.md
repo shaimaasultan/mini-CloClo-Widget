@@ -9,6 +9,8 @@ can't see the screen well. It keeps only:
   recording, or your own).
 - **Quran memorization** — recitation on a loop, controlled by keyboard or voice.
 - **Calling** — "call Mom" places a call on your mobile phone over Bluetooth.
+- **Your own questions and answers** — "Ramadan date", "when is Civic
+  Holiday?": Islamic dates worked out on the PC, holidays and your own notes.
 - **The avatar**, which changes with what's happening (prayer clothes, reading
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
 - **The time and date** — large, plus the Hijri date and the next prayer.
@@ -108,6 +110,9 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Cancel / إلغاء | Cancels a call or a shutdown waiting for an answer |
 | I prayed / صليت | Ends the prayer look |
 | Help / مساعدة | Says the commands and shortcuts |
+| Ramadan date / تاريخ رمضان (any of your own words) | Answers with what you entered, or the next date ([Questions and answers](#questions-and-answers)) |
+| Again / قولها تاني | Says the last answer to your own question again |
+| What topics do I have? / مواضيعي | Lists your topics |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
@@ -130,6 +135,7 @@ noisy microphone from a misheard word.
 | **Q** | Quran memorization |
 | **R** | Custom reminders |
 | **K** | Contacts and calls |
+| **I** | Questions and answers |
 | **V** | Talk (press again when done) |
 | **S** | Stop sounds |
 | **M** | The menu (opens with the keyboard in it) |
@@ -178,6 +184,48 @@ Bluetooth headset in use), it leaves it on. Only saved contacts can be called,
 and a voice call is always confirmed first. English names are recognized
 reliably; Arabic is weaker with the small speech model, so the window
 (Ctrl+Alt+K, Enter) is the dependable way for Arabic speakers.
+
+## Questions and answers
+
+Your own questions, by **topic**: each topic holds **words you say** —
+*Ramadan*, *Civic Holiday*, *Clinic* — and Keeper answers each one with:
+
+- **text** you typed, read exactly as written ("Dr. Sami's clinic is open
+  Sunday to Thursday, 9 to 5");
+- **dates** — the next one, its weekday and how far away it is, with the
+  Hijri date: "Civic Holiday. In 284 days, on Monday, August 2, 2027, 29 Safar
+  1449";
+- a **Hijri date** — worked out on the PC every year with Windows' Umm
+  al-Qura calendar (it may differ by a day from a local moon sighting):
+  "Ramadan. In 109 days, on Monday, February 8, 2027, 1 Ramadan 1448."
+
+**Islamic dates** come ready-made: Isra and Mi'raj, Shab-e-Barat, Ramadan,
+Laylat al-Qadr, Eid al-Fitr, Dhul Hijjah, Hajj, Arafah, Eid al-Adha, the
+Islamic new year and Ashura, each with its Arabic name.
+
+**Asking:** say the word, or "Ramadan date", "when is Ashura?", "how many
+days until Eid?", "date of Hajj", "تاريخ رمضان", "رمضان امتى؟", "فاضل قد ايه
+على العيد؟". "Eid" / "العيد" answers both Eids. A word misheard by a sound
+("Laylat al-Kodim", "A surah" for Ashura) still finds it. Say a topic's name
+to hear what's in it, "what topics do I have?" / "مواضيعي" for the list, and
+**"again"** / **"قولها تاني"** to hear the last answer again (for 5 minutes).
+
+**Editing:** **Ctrl+Alt+I** (or menu → *Questions and answers…*). Topics are
+on the left and their words on the right: *Add…* / *Edit…* asks for the word
+(and another way to say it, e.g. in Arabic) and the kind of answer; *Say the
+answer* tries it. Words that are already commands ("time", "Quran", an app's
+name, "call …") can't be used. *Export…* / *Import…* share the list as a
+file; importing a topic with the same name replaces it.
+
+**Published dates from the internet** (optional, outside the app):
+double-click `tools\Get-CalendarTopics.cmd`, give your country (e.g. `CA`)
+and province (e.g. `CA-ON`), and it saves *CloClo calendar <year>.json* in
+your Downloads folder with this year's and next year's Islamic dates
+([Aladhan](https://aladhan.com), the Saudi official calendar by default) and
+public holidays ([Nager.Date](https://date.nager.at)). Import it with
+*Import…*: it replaces *Islamic dates* with the published dates, and adds
+*Public holidays*. Mini CloClo itself still never goes online — only this
+script does, when you run it; run it again each year.
 
 ## What it does on its own
 
@@ -275,8 +323,8 @@ hidden, it keeps working and its shortcuts too.
 
 ## Where things are kept
 
-- Settings, reminders and contacts (names and numbers, in plain text):
-  `%APPDATA%\MiniCloClo\settings.json`
+- Settings, reminders, contacts (names and numbers, in plain text) and your
+  questions and answers: `%APPDATA%\MiniCloClo\settings.json`
 - Quran progress: `%APPDATA%\MiniCloClo\quran.json`
 - Error log (exception types only, no text you said or typed):
   `%LOCALAPPDATA%\MiniCloClo\errors.log`
@@ -294,6 +342,9 @@ dropped after each command.
   the Bluetooth dialer, single instance, startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check and
   the firewall rules.
+- `tools/Get-CalendarTopics.ps1` (and `.cmd`) — downloads published Islamic
+  dates and public holidays into a file to import (the one part that goes
+  online, run by hand).
 - `tools/PromoVideo/` — makes the promo videos, offline: scenes drawn with the
   app's own avatar, narration by a Windows voice, encoded by Windows.
   `PromoVideo.exe <output.mp4>` for English, add `--arabic` for Arabic. It
@@ -302,13 +353,17 @@ dropped after each command.
   README links the release copies, whose downloads don't use the LFS
   bandwidth allowance.
 
-Debug builds have five test switches:
+Debug builds have these test switches:
 
 - `MiniCloClo.exe --snapshot <folder>` draws every avatar look to PNG files.
 - `--voice-test <file>` speaks test commands with a Windows voice and runs
   them through the recognizer.
 - `--prayer-test <file>` writes today's times, sunrise and sunset for a few
   cities.
+- `--topics-test <file> [import file]` checks the questions and answers: the
+  answers, the Hijri dates, what is said, words that clash with commands —
+  and, with a file, imports it into the window.
+- `--quran-test <file>` plays a whole surah and a range in the Quran window.
 - `--load-trace <file>` records which part of the app loads any networking
   library (only WPF's startup and Windows' speech voices do, and none of them
   connects anywhere).

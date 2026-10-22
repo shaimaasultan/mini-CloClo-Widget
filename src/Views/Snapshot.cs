@@ -119,6 +119,100 @@ internal static class Snapshot
         return 0;
     }
 
+    // Sample topics for the questions-and-answers checks: the ready-made
+    // Islamic dates, plus a calendar and a text answer.
+    private static System.Collections.Generic.List<TopicSettings> SampleTopics(DateTime today)
+    {
+        var topics = TopicAction.IslamicDates();
+        topics.Add(new TopicSettings
+        {
+            Name = "Vacations", OtherName = "الإجازات",
+            Actions =
+            [
+                new() { Word = "Civic", OtherWord = "الإجازة المدنية", Kind = TopicAction.CalendarKind,
+                        Dates = [today.AddDays(-3).ToString("yyyy-MM-dd"), today.AddDays(12).ToString("yyyy-MM-dd"), today.AddYears(1).ToString("yyyy-MM-dd")] },
+                new() { Word = "Holidays", Kind = TopicAction.CalendarKind, Dates = [today.ToString("yyyy-MM-dd")] },
+                new() { Word = "Long weekend", Kind = TopicAction.CalendarKind, Dates = [today.AddDays(1).ToString("yyyy-MM-dd")] },
+                new() { Word = "Old trip", Kind = TopicAction.CalendarKind, Dates = ["2020-01-01"] },
+                new() { Word = "Canada Day", Kind = TopicAction.CalendarKind, Dates = [today.AddDays(30).ToString("yyyy-MM-dd")] },
+                new() { Word = "Labour Day", Kind = TopicAction.CalendarKind, Dates = [today.AddDays(40).ToString("yyyy-MM-dd")] },
+                new() { Word = "Family Day", Kind = TopicAction.CalendarKind, Dates = [today.AddDays(50).ToString("yyyy-MM-dd")] },
+            ],
+        });
+        topics.Add(new TopicSettings
+        {
+            Name = "Doctor", OtherName = "الدكتور",
+            Actions = [new() { Word = "Clinic", OtherWord = "العيادة", Text = "Dr. Sami's clinic is open Sunday to Thursday, 9 to 5.", OtherText = "عيادة دكتور سامي فاتحة من الحد للخميس، من ٩ لـ ٥." }],
+        });
+        return topics.Select(t => t.ValidateAndNormalize()!).ToList();
+    }
+
+    // "MiniCloClo.exe --topics-test <report file>": the answers and the
+    // matching of questions and answers, on sample topics.
+    public static int TopicsTest(string reportPath, string? importFile = null)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        if (importFile != null)
+        {
+            // The Import button's path, on a real window with the ready-made topics.
+            var app = System.Windows.Application.Current ?? new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            Voice.Muted = true;
+            var window = new TopicsWindow(TopicAction.IslamicDates()) { Left = -20000, ShowActivated = false, ShowInTaskbar = false };
+            window.Show();
+            Pump(300);
+            lines.Add($"before import: shown topic {window.ShownTopic}, actions: {string.Join(" | ", window.ShownActions)}");
+            window.ImportFile(importFile);
+            Pump(300);
+            lines.Add($"after import: shown topic {window.ShownTopic}, actions: {string.Join(" | ", window.ShownActions)}");
+            foreach (var topic in window.Topics) lines.Add($"window topic: {topic.Name}: {string.Join(", ", topic.Actions.Select(a => $"{a.Word} [{a.Kind}, {a.Dates.Count}]"))}");
+            window.Close();
+            // Read a file the way Import does (tools\Get-CalendarTopics.ps1).
+            var imported = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<TopicSettings>>(File.ReadAllText(importFile)) ?? new();
+            foreach (var topic in imported.Select(t => t?.ValidateAndNormalize()).Where(t => t != null).Cast<TopicSettings>())
+            {
+                lines.Add($"imported topic: {topic.Name} / {topic.OtherName}, {topic.Actions.Count} actions");
+                foreach (var action in topic.Actions)
+                    lines.Add($"  {action.Word}{(action.OtherWord != null ? " / " + action.OtherWord : "")}: {action.Dates.Count} dates, clash: {TopicVoiceCommand.Clash(action.Word) ?? "none"} -> {TopicAnswers.Answer(action, DateTime.Today).English}");
+            }
+        }
+        var today = DateTime.Today;
+        var topics = SampleTopics(today);
+        lines.Add($"today: {today:yyyy-MM-dd} ({SpokenTime.HijriText(today)})");
+        foreach (var action in topics.SelectMany(t => t.Actions))
+        {
+            var (english, arabic) = TopicAnswers.Answer(action, today);
+            lines.Add($"{action.Word}: {english} | {arabic}");
+        }
+        lines.Add("-- Hijri dates checked back --");
+        foreach (var (month, day) in new[] { (9, 1), (10, 1), (12, 10), (1, 1), (12, 30) })
+            lines.Add($"{day} {SpokenTime.HijriMonthName(month)} -> {SpokenTime.NextHijriDate(month, day, today):yyyy-MM-dd} = {(SpokenTime.NextHijriDate(month, day, today) is { } d ? SpokenTime.HijriText(d) : "-")}");
+        lines.Add("-- what is said --");
+        foreach (var heard in new[] { "Ramadan.", "When is Ramadan?", "How many days until Ramadan?", "Ramadhan.", "Eid.", "When is Eid al-Adha?",
+                     "رمضان", "رمضان امتى؟", "فاضل قد ايه على رمضان؟", "العيد", "عيد الأضحى امتى", "الحج", "Civic.", "When is Civic?",
+                     "Clinic.", "العيادة", "Vacations.", "What's in Vacations?", "الإجازات", "What topics do I have?", "مواضيعي",
+                     "What time is it?", "Calculator.", "Call Mom.", "Hello there.", "رمضان أمجي.", "فاضل قد إه على العيدي.", "موضعي.", "الحجي.", "Colchia.", "Laylat al-Kodim.", "Laylat al-Qadr.", "Again.", "Say it again.", "Date again.", "Repeat that.", "One more time.", "قولها تاني", "تاني", "كمان مرة", "Repeat.", "Canada Day.", "When is Labour Day?", "Family Day date.", "Ashura date.", "Ramadan date.", "Ramadan's date.", "Eid al-Adha date.", "Civic date.", "Date of Ramadan.", "What's the date of Ashura?", "A surah date.", "Date.", "The date.", "تاريخ رمضان", "رمضان تاريخه", "عاشوراء ميعادها", "ميعاد الحج", "Ashura.", "A surah.", "A sura.", "Choose a surah.", "Quran surah.", "Surah.", "Shab-e-Barat.", "Isra and Miraj.", "Dhul Hijjah." })
+        {
+            var exact = TopicVoiceCommand.TryMatch(heard, topics, loose: false);
+            var match = exact ?? TopicVoiceCommand.TryMatch(heard, topics, loose: true);
+            var shown = match switch
+            {
+                TopicVoiceCommand.ActionMatch a => "action " + a.Action.Word,
+                TopicVoiceCommand.ActionsMatch m => "actions " + string.Join(" + ", m.Actions.Select(x => x.Word)),
+                TopicVoiceCommand.TopicMatch t => "topic " + t.Topic.Name,
+                TopicVoiceCommand.ListMatch => "list of topics",
+                _ => "-",
+            };
+            lines.Add($"\"{heard}\" -> {shown}{(match != null && exact == null ? " (by sound)" : "")}");
+            if (WidgetVoiceCommands.TryMatch(heard, out var builtIn))
+                lines.Add($"    built-in {builtIn}; own word that sounds the same: {(TopicVoiceCommand.TryMatch(heard, topics, loose: true, sameSound: true) is TopicVoiceCommand.ActionMatch same ? same.Action.Word : "none")}");
+        }
+        lines.Add("-- words that can't be used --");
+        foreach (var word in new[] { "Time", "Quran", "Calculator", "Call Mom", "Cancel", "Ramadan", "Civic", "الساعة" })
+            lines.Add($"\"{word}\" -> {TopicVoiceCommand.Clash(word) ?? "free"}");
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --bt-test <report file> <device name> [number]": the
     // experimental Bluetooth dialer. Without a number it only connects, does
     // the hands-free handshake and disconnects; with one it also dials it.
@@ -251,14 +345,22 @@ internal static class Snapshot
             ("What time is it?", false), ("What's the date?", false), ("Next prayer.", false), ("Prayer times.", false),
             ("Open the Quran.", false), ("Next.", false), ("Reminders.", false), ("Help.", false), ("Stop.", false),
             ("I prayed.", false), ("Open Notepad.", false), ("Calculator.", false), ("Narrator.", false), ("Shut down.", false),
-            ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
+            ("Ramadan.", false), ("When is Eid al-Adha?", false), ("How many days until Ramadan?", false), ("Civic.", false), ("What topics do I have?", false), ("Choose a surah.", false), ("Quran surah.", false), ("Quran, surah.", false), ("Quran surah please.", false), ("Quran.", false), ("Al-Fatiha.", false), ("Al-Baqara.", false), ("Surah Yasin.", false), ("Number two.", false),
             ("Three.", false), ("Five.", false), ("Ten.", false), ("Fourteen.", false), ("Seventeen.", false), ("Forty.", false), ("One four.", false), ("One three.", false), ("One seven.", false), ("Two three four.", false), ("Two eight six.", false), ("One hundred and twenty.", false), ("No.", false), ("Go back.", false), ("All.", false), ("The whole surah.", false), ("Twenty five.", false), ("To the end.", false),
-            ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
+            ("رمضان", true), ("رمضان امتى؟", true), ("فاضل قد ايه على العيد؟", true), ("الحج", true), ("مواضيعي", true), ("اختار سورة", true), ("القرآن سورة", true), ("الفاتحة", true), ("سورة البقرة", true), ("ثلاثة", true), ("خمسة", true), ("عشرة", true), ("أربعتاشر", true), ("سبعة وعشرين", true), ("واحد أربعة", true), ("واحد سبعة", true), ("اتنين تلاتة أربعة", true), ("واحد تلاتة", true), ("لا", true), ("ارجع", true), ("كلها", true), ("السورة كلها", true),
             ("Call Mom.", false), ("Call Ahmed.", false), ("Call sho.", false), ("Yes.", false), ("Yes!", false), ("Yes, yes.", false),
             ("Yes, call him.", false), ("Yeah.", false), ("Yes please.", false), ("Okay.", false), ("اتصل بماما", true), ("اتصل بأحمد", true), ("ايوه", true), ("نعم", true), ("نعم.", true), ("نعم، اتصل", true), ("نعم نعم", true), ("لا", true),
             ("الساعة كام", true), ("كم الساعة", true), ("مواقيت الصلاة", true), ("اسكت", true), ("افتح المفكرة", true), ("الصلاة الجاية", true), ("افتح القرآن", true), ("صليت", true), ("التاريخ", true),
         };
         var lines = new System.Collections.Generic.List<string>();
+        var topics = SampleTopics(DateTime.Today);
+        static string TopicLabel(TopicVoiceCommand.Match match) => match switch
+        {
+            TopicVoiceCommand.ActionMatch a => a.Action.Word,
+            TopicVoiceCommand.ActionsMatch m => string.Join(" + ", m.Actions.Select(x => x.Word)),
+            TopicVoiceCommand.TopicMatch t => "topic " + t.Topic.Name,
+            _ => "list of topics",
+        };
         foreach (var (text, arabic) in phrases)
         {
             try
@@ -275,9 +377,11 @@ internal static class Snapshot
                         ? "call:" + (CallVoiceCommand.Match(who, TestContacts)?.Name ?? $"(no contact for \"{who}\")")
                     : CallVoiceCommand.IsYes(heard) ? "yes (confirms a call)"
                     : WidgetVoiceCommands.TryMatch(heard, out var command) ? "widget:" + command
+                    : TopicVoiceCommand.TryMatch(heard, topics, loose: false) is { } topicMatch ? "topic:" + TopicLabel(topicMatch)
                     : ApprovedVoiceAppLauncher.IsShutdownCommand(heard) ? "shutdown"
                     : ApprovedVoiceAppLauncher.IsCancelCommand(heard) ? "cancel/stop"
                     : ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app) ? "app:" + app
+                    : TopicVoiceCommand.TryMatch(heard, topics, loose: true) is { } looseTopic ? "topic (by sound):" + TopicLabel(looseTopic)
                     : WidgetVoiceCommands.TryMatchLoosely(heard, out var loose) ? "widget (loose):" + loose
                     : "NO MATCH";
                 lines.Add($"{text} -> heard \"{heard}\" -> {match}{answers}");

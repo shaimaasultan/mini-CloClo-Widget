@@ -246,8 +246,13 @@ public partial class MainWindow
             await StartShutdownAsync();
             return;
         }
+        // The person's own questions first: their words can't be built-in
+        // commands (saving refuses them), so nothing is taken from those.
+        if (TryAnswerTopic(heard, loose: false)) return;
         if (WidgetVoiceCommands.TryMatch(heard, out var command))
         {
+            // "A surah" may be "Ashura": an own word that sounds the same wins.
+            if (command == WidgetVoiceCommand.ChooseSurah && TryAnswerTopic(heard, loose: true, sameSound: true)) return;
             Keeper.SetVoiceStatus("complete");
             RunWidgetCommand(command);
             return;
@@ -257,6 +262,8 @@ public partial class MainWindow
             // A call waiting for "yes" and an answer that wasn't understood:
             // ask again rather than treat it as some other command.
             if (await AskAgainForPendingCallAsync(heard)) return;
+            // An action word one or two sounds off ("Ramadhan").
+            if (TryAnswerTopic(heard, loose: true)) return;
             if (WidgetVoiceCommands.TryMatchLoosely(heard, out var looseCommand))
             {
                 Keeper.SetVoiceStatus("complete");
@@ -300,6 +307,7 @@ public partial class MainWindow
                 if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة.");
                 break;
             case WidgetVoiceCommand.Prayed: MarkPrayed(); break;
+            case WidgetVoiceCommand.SayAgain: SayLastAnswerAgain(); break;
         }
     }
 

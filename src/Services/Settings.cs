@@ -72,6 +72,11 @@ public class WidgetSettings
     // it and its name as shown in Settings. Null until chosen or found.
     public string? PhoneDeviceId { get; set; }
     public string? PhoneName { get; set; }
+    // The person's own questions and answers, by topic (Topics.cs). The
+    // Islamic dates are added once, the first time; after that, what the
+    // person keeps or removes stays that way.
+    public List<TopicSettings> Topics { get; set; } = new();
+    public bool TopicsSeeded { get; set; }
 
     public static double RoundCoordinate(double value) => Math.Round(value, 2);
 
@@ -111,6 +116,8 @@ public class WidgetSettings
             settings.LocationTimeZoneId = city.TimeZoneId;
             settings.PrayerCalculationMethod = city.Method;
         }
+        settings.Topics = TopicAction.IslamicDates();
+        settings.TopicsSeeded = true;
         return settings;
     }
 
@@ -155,6 +162,17 @@ public class WidgetSettings
             .ToList();
         if (PhoneDeviceId is not null && (PhoneDeviceId.Length > 512 || PhoneDeviceId.Any(char.IsControl))) PhoneDeviceId = null;
         if (PhoneName is not null && !IsSafeText(PhoneName, 100)) PhoneName = null;
+        if (!TopicsSeeded)
+        {
+            Topics = TopicAction.IslamicDates();
+            TopicsSeeded = true;
+        }
+        Topics = (Topics ?? new List<TopicSettings>())
+            .Take(TopicSettings.MaxTopics)
+            .Select(topic => topic?.ValidateAndNormalize())
+            .Where(topic => topic != null)
+            .Cast<TopicSettings>()
+            .ToList();
         CustomReminders = (CustomReminders ?? new List<CustomReminderSettings>())
             .Take(MaxCustomReminders)
             .Select(reminder => reminder?.ValidateAndNormalize())

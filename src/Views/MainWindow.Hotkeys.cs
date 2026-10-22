@@ -30,6 +30,7 @@ public partial class MainWindow
         ('Q', OpenQuran),
         ('R', OpenCustomReminders),
         ('K', OpenContacts),
+        ('I', OpenTopics),
         ('V', ToggleKeyboardVoiceCommand),
         ('S', () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
         ('M', OpenMenu),

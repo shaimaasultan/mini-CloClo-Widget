@@ -52,6 +52,23 @@ public static class SpokenTime
         return (Hijri.GetDayOfMonth(date), Hijri.GetMonth(date), Hijri.GetYear(date));
     }
 
+    public static string HijriMonthName(int month) => HijriMonths[Math.Clamp(month, 1, 12) - 1];
+    public static string HijriMonthNameArabic(int month) => HijriMonthsArabic[Math.Clamp(month, 1, 12) - 1];
+
+    // The next day, from `from` on, that is this Hijri month and day (a 30th
+    // that a month doesn't have counts as its last day); null outside the
+    // calendar's range.
+    public static DateTime? NextHijriDate(int month, int day, DateTime from)
+    {
+        for (var date = from.Date; date <= from.Date.AddDays(400); date = date.AddDays(1))
+        {
+            if (HijriDate(date) is not { } h || h.Month != month) continue;
+            var last = Hijri.GetDaysInMonth(h.Year, h.Month);
+            if (h.Day == Math.Min(day, last)) return date;
+        }
+        return null;
+    }
+
     // "8 Jumada al-Ula 1448 AH" for the widget's date line.
     public static string HijriText(DateTime date) =>
         HijriDate(date) is { } h ? $"{h.Day} {HijriMonths[h.Month - 1]} {h.Year} AH" : "";

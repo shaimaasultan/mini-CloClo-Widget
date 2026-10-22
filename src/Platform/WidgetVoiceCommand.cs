@@ -9,7 +9,7 @@ namespace MiniCloClo;
 // only these fixed phrases count (compared after the same cleanup, with the
 // wake name, "please" and "now" tolerated); the transcript is never used as
 // anything but a key into this table.
-internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed }
+internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain }
 
 internal static class WidgetVoiceCommands
 {
@@ -69,6 +69,12 @@ internal static class WidgetVoiceCommands
             "stop sound", "stop the sound", "quiet", "be quiet", "silence", "stop playing", "stop the azan",
             "stop the recitation", "mute", "pause",
             "اسكت", "وقف الصوت", "اسكت شويه", "وقف", "وقف الاذان", "وقف القران", "كفايه",
+        ]),
+        // The last answer to one of the person's own questions, again.
+        (WidgetVoiceCommand.SayAgain, [
+            "again", "say it again", "say that again", "say again", "date again", "the date again", "one more time",
+            "repeat that", "repeat it", "repeat the date", "tell me again", "what was that", "pardon",
+            "تاني", "قولها تاني", "قوله تاني", "قول تاني", "قولي تاني", "كمان مره", "مره كمان", "التاريخ تاني", "عيدها", "عيدها تاني",
         ]),
         (WidgetVoiceCommand.Prayed, [
             "i prayed", "i ve prayed", "i have prayed", "done praying", "prayed", "i finished praying",
