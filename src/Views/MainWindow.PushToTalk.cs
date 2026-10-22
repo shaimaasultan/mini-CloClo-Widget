@@ -27,6 +27,8 @@ public partial class MainWindow
     // Listening and not yet released.
     private bool _pushToTalkHeld;
     private readonly List<string> _pushToTalkText = [];
+    // The English reading of an Arabic answer to a surah question.
+    private readonly List<string> _pushToTalkEnglish = [];
     private DispatcherTimer? _keyboardListenTimer;
     // Time to say "cancel" after the shutdown announcement ends.
     private const int ShutdownCountdownSeconds = 10;
@@ -102,18 +104,28 @@ public partial class MainWindow
 
         var arabic = _settings.VoiceCommandsInArabic;
         // While a choose-a-surah question waits, the hint is surah names and
-        // numbers, so an ayah number comes out as digits.
+        // numbers, so an ayah number comes out as digits - and in Arabic the
+        // phrase is also read as English, for a number said in English.
         var session = new LocalAudioTranscriber(AudioCaptureSource.Microphone,
             recognitionPrompt: QuranDialogActive
                 ? (arabic ? QuranVoiceAnswers.ArabicRecognitionPrompt : QuranVoiceAnswers.RecognitionPrompt)
                 : (arabic
                     ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt
-                    : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic));
+                    : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic),
+            englishPrompt: QuranDialogActive && arabic ? QuranVoiceAnswers.RecognitionPrompt : null);
         _pushToTalk = session;
-        lock (_pushToTalkText) _pushToTalkText.Clear();
+        lock (_pushToTalkText)
+        {
+            _pushToTalkText.Clear();
+            _pushToTalkEnglish.Clear();
+        }
         session.TextRecognized += text =>
         {
             lock (_pushToTalkText) _pushToTalkText.Add(text);
+        };
+        session.AlternateTextRecognized += text =>
+        {
+            lock (_pushToTalkText) _pushToTalkEnglish.Add(text);
         };
         session.Failed += message =>
         {
@@ -177,11 +189,16 @@ public partial class MainWindow
         if (_pushToTalk != session) return; // aborted meanwhile
         _pushToTalk = null;
         string heard;
+        string? english;
         lock (_pushToTalkText)
         {
             heard = string.Join(" ", _pushToTalkText);
+            english = _pushToTalkEnglish.Count > 0 ? string.Join(" ", _pushToTalkEnglish) : null;
             _pushToTalkText.Clear();
+            _pushToTalkEnglish.Clear();
         }
+        // Nothing heard in Arabic but a number in English: answer with that.
+        if (heard.Length == 0 && english != null && QuranDialogActive && QuranVoiceAnswers.Number(english) != null) heard = english;
         Keeper.SetVoiceStatus("off");
         if (_closing) return;
 
@@ -221,7 +238,7 @@ public partial class MainWindow
             return;
         }
         // An answer to "which surah?" / "from which ayah?" / "to which ayah?".
-        if (await TryHandleQuranAnswerAsync(heard)) return;
+        if (await TryHandleQuranAnswerAsync(heard, english)) return;
         // "Call Mom": read back, then dialed only after "yes".
         if (await TryHandleCallCommandAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsShutdownCommand(heard))

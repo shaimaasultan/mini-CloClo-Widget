@@ -224,6 +224,9 @@ reliably; Arabic is weaker with the small speech model, so the window
   "fourteen" or "seventeen". Only those ten words are matched by sound
   ("tree" for three, "سبات" for سبعة), so other speech is asked again rather
   than guessed at. "14" said whole still works when it is heard right.
+  With voice commands in Arabic, the digits may be said in Arabic **or in
+  English** — "واحد أربعة" or "one four": each answer is read both ways, and
+  the reading that is just a number is used.
 
   An unclear answer is asked again (the label shows what was heard). If
   Keeper reads back the wrong surah or ayah, say **"no"** (or "back", "لا",

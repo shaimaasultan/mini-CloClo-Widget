@@ -287,6 +287,32 @@ internal static class Snapshot
                 lines.Add($"{text} -> {ex.GetType().Name}: {ex.Message}");
             }
         }
+        // Arabic voice mode during a surah question: each answer is read as
+        // Arabic and as English, and the clean number wins.
+        lines.Add("-- Arabic mode answers, read as Arabic and as English --");
+        foreach (var (text, voiceArabic) in new (string, bool)[]
+                 {
+                     ("One four.", false), ("Two three four.", false), ("One seven.", false), ("Two eight six.", false),
+                     ("واحد أربعة", true), ("اتنين تلاتة أربعة", true), ("سبعة وعشرين", true), ("واحد سبعة", true), ("خمسة", true),
+                 })
+        {
+            try
+            {
+                var samples = Synthesize(text, voiceArabic).GetAwaiter().GetResult();
+                if (samples == null) { lines.Add($"{text} -> (no voice installed)"); continue; }
+                var asArabic = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic: true,
+                    prompt: QuranVoiceAnswers.ArabicRecognitionPrompt).GetAwaiter().GetResult();
+                var asEnglish = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic: false,
+                    prompt: QuranVoiceAnswers.RecognitionPrompt).GetAwaiter().GetResult();
+                lines.Add($"{text} -> Arabic \"{asArabic}\" ({QuranVoiceAnswers.Number(asArabic)?.ToString() ?? "-"}), " +
+                          $"English \"{asEnglish}\" ({QuranVoiceAnswers.Number(asEnglish)?.ToString() ?? "-"}) -> " +
+                          $"{QuranVoiceAnswers.Number(asArabic, asEnglish)?.ToString() ?? "asked again"}");
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{text} -> {ex.GetType().Name}: {ex.Message}");
+            }
+        }
         lines.Add("-- choose-a-surah answers, as Whisper may write them --");
         foreach (var heard in new[] { "1", "Surah 2.", "Al-Faatiha", "Fatiha.", "The Cow.", "Baqarah.", "Yaseen.", "Surat Al-Kahf", "114.",
                      "115.", "Ayah 3.", "From ayah three.", "twenty-five", "Two hundred and eighty six.", "the first", "from the start",

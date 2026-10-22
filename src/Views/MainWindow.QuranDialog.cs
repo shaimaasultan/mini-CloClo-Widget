@@ -47,7 +47,7 @@ public partial class MainWindow
         {
             QuranQuestion.Surah => ("Which surah? Say its name, or its number digit by digit.", "أنهي سورة؟ قول اسمها، أو رقمها رقم رقم.", "Which surah?"),
             QuranQuestion.From => ("From which ayah? Say it digit by digit, like one four for 14. Or say all, for the whole surah.",
-                "من أنهي آية؟ قولها رقم رقم، زي واحد أربعة يعني أربعتاشر. أو قول كلها، للسورة كلها.", "From which ayah? (or \"all\")"),
+                "من أنهي آية؟ قولها رقم رقم، بالعربي أو بالإنجليزي، زي واحد أربعة يعني أربعتاشر. أو قول كلها، للسورة كلها.", "From which ayah? (or \"all\")"),
             _ => ("To which ayah? Digit by digit. Or say no, to change the start.",
                 "لحد أنهي آية؟ رقم رقم. أو قول لا، عشان تغير البداية.", "To which ayah?"),
         };
@@ -63,14 +63,16 @@ public partial class MainWindow
 
     // An answer while a question waits: true when it was taken (or asked
     // again); false lets other commands - and "cancel" - through.
-    private async Task<bool> TryHandleQuranAnswerAsync(string heard)
+    // english: in Arabic mode, the same answer read as English - used only
+    // for numbers ("one four"), never for names or other words.
+    private async Task<bool> TryHandleQuranAnswerAsync(string heard, string? english = null)
     {
         if (!QuranDialogActive) return false;
         Keeper.SetVoiceStatus("complete");
         switch (_quranQuestion)
         {
             case QuranQuestion.Surah:
-                if (QuranVoiceAnswers.Surah(heard) is not { } chosen)
+                if ((QuranVoiceAnswers.Surah(heard) ?? EnglishSurahNumber(english)) is not { } chosen)
                 {
                     Keeper.SetVoiceStatus("failed");
                     await AskQuranAsync(QuranQuestion.Surah, ("I didn't catch the surah.", "ما فهمتش السورة."), heard);
@@ -92,7 +94,7 @@ public partial class MainWindow
                     OpenQuranWith(window => window.PlayWholeSurah(surah));
                     return true;
                 }
-                if (QuranVoiceAnswers.Number(heard) is not { } from || from < 1)
+                if (QuranVoiceAnswers.Number(heard, english) is not { } from || from < 1)
                 {
                     Keeper.SetVoiceStatus("failed");
                     await AskQuranAsync(QuranQuestion.From, ("I didn't catch the ayah.", "ما فهمتش رقم الآية."), heard);
@@ -123,7 +125,7 @@ public partial class MainWindow
                 var from = _quranDialogFrom;
                 int to;
                 if (QuranVoiceAnswers.IsEnd(heard)) to = count;
-                else if (QuranVoiceAnswers.Number(heard) is { } number) to = number;
+                else if (QuranVoiceAnswers.Number(heard, english) is { } number) to = number;
                 else
                 {
                     Keeper.SetVoiceStatus("failed");
@@ -174,6 +176,10 @@ public partial class MainWindow
         }
         return true;
     }
+
+    // A surah number said in English in Arabic mode ("one eight" is Al-Kahf).
+    private static int? EnglishSurahNumber(string? english) =>
+        english != null && QuranVoiceAnswers.Number(english) is { } number and >= 1 and <= 114 ? number : null;
 
     // "Cancel" while a question waits: true when there was one.
     private bool CancelQuranDialog()

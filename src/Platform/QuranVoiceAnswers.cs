@@ -102,8 +102,25 @@ internal static class QuranVoiceAnswers
     // filler words around it ignored. Only the ten digit words are matched
     // by sound ("tree" for "three", "سلاسة" for "ثلاثة"): fewer, more
     // different words, so a sound-alike can't be read as the wrong number.
-    internal static int? Number(string transcript)
+    internal static int? Number(string transcript) => Number(transcript, out _);
+
+    // In Arabic voice mode a number may be said in Arabic or in English: the
+    // phrase is read both ways (english is null otherwise). A reading that is
+    // only a number wins over one with other words around it, and Arabic
+    // over English when both are - or neither is - clean.
+    internal static int? Number(string arabic, string? english)
     {
+        var fromArabic = Number(arabic, out var arabicClean);
+        if (english == null || (fromArabic != null && arabicClean)) return fromArabic;
+        var fromEnglish = Number(english, out var englishClean);
+        if (fromEnglish != null && englishClean) return fromEnglish;
+        return fromArabic ?? fromEnglish;
+    }
+
+    // clean: nothing but the number was said (besides filler words).
+    private static int? Number(string transcript, out bool clean)
+    {
+        clean = false;
         var phrase = Phrase(transcript);
         var words = Words(phrase);
         if (words.Length == 0) return null;
@@ -111,10 +128,17 @@ internal static class QuranVoiceAnswers
         // nothing else was said, since "from 3 to 5" is not 35.
         if (words.Length >= 2 && words.Length == phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length &&
             words.All(w => Digit(w) != null))
+        {
+            clean = true;
             return int.Parse(string.Concat(words.Select(w => Digit(w))));
+        }
         // Digits anywhere: Whisper usually writes numbers that way.
         foreach (var word in words)
-            if (word.All(char.IsAsciiDigit) && word.Length <= 4) return int.Parse(word);
+            if (word.All(char.IsAsciiDigit) && word.Length <= 4)
+            {
+                clean = words.Length == 1;
+                return int.Parse(word);
+            }
 
         var total = 0;
         var current = 0;
@@ -140,6 +164,7 @@ internal static class QuranVoiceAnswers
             if (value <= 9 && bare == word && !Ordinal(bare)) digits.Add(value.Value);
             else onlyDigits = false;
         }
+        clean = any;
         if (onlyDigits && digits.Count >= 2) return int.Parse(string.Concat(digits));
         return any ? total + current : null;
     }

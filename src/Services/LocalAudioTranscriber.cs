@@ -22,9 +22,12 @@ internal enum AudioCaptureSource { Microphone, Playback }
 // disk and nothing leaves the PC. Recognition text is emitted as data; this
 // service cannot execute actions. (Mini CloClo uses it only for voice
 // commands from the microphone.)
+// englishPrompt: with an Arabic voice command, each phrase is also decoded as
+// English with this hint (AlternateTextRecognized) - used while a surah
+// question waits, so a number said in English is understood too.
 internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool reduceMicrophoneNoise = false,
     bool useHighResolutionMicrophone = false, string? recognitionPrompt = null,
-    uint? playbackProcessId = null) : IAsyncDisposable
+    uint? playbackProcessId = null, string? englishPrompt = null) : IAsyncDisposable
 {
     private const int SampleRate = 16000;
     private const int HighResolutionSampleRate = 48000;
@@ -71,6 +74,8 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
     private string? _engine;
 
     public event Action<string>? TextRecognized;
+    // The English reading of the same phrase, when englishPrompt was given.
+    public event Action<string>? AlternateTextRecognized;
     // The phrase being spoken right now, as heard so far: replaced about once
     // a second, then cleared ("") when the phrase's final text arrives.
     public event Action<string>? InterimTextRecognized;
@@ -162,6 +167,10 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
                         ? EgyptianArabicPrompt : ArabicPrompt);
             }
             using var processor = builder.Build();
+            using var englishProcessor = arabic && recognitionPrompt != null && englishPrompt != null
+                ? factory.CreateBuilder().WithLanguage("en").WithThreads(WhisperThreads.Value).WithPrompt(englishPrompt)
+                    .WithAudioContextSize(512).WithSingleSegment().WithMaxTokensPerSegment(32).Build()
+                : null;
             // Live preview for dictation and playback: a fast greedy pass over
             // the phrase so far, with a 10-second audio window. On the test
             // clips it took about 0.6 s per update on a GPU (turbo) and 0.35 s
@@ -389,6 +398,15 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
                         TextRecognized?.Invoke(text);
                         ReportProgress();
                     }
+                    if (englishProcessor != null)
+                        await foreach (var segment in englishProcessor.ProcessAsync(samples, CancellationToken.None))
+                        {
+                            var text = TranscriptCleanup.Clean(segment.Text);
+                            if (_stop.IsCancellationRequested || text.Length == 0 || TranscriptCleanup.IsLikelyHallucination(text) ||
+                                Volatile.Read(ref _voiceRecognitionMode) != voiceMode || input.Epoch != phraseEpoch)
+                                continue;
+                            AlternateTextRecognized?.Invoke(text);
+                        }
                 }
                 if (interimProcessor != null && !_stop.IsCancellationRequested) InterimTextRecognized?.Invoke("");
                 if (endOfStream) break;
