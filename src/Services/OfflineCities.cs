@@ -129,4 +129,38 @@ public static class OfflineCities
 
     public static OfflineCity? Find(string name) =>
         All.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    // Two-letter country codes (ISO 3166-1), for tools that look up a
+    // country's public holidays ("pull dates").
+    private static readonly Dictionary<string, string> CountryCodes = new()
+    {
+        ["Egypt"] = "EG", ["United States"] = "US", ["Saudi Arabia"] = "SA", ["United Kingdom"] = "GB", ["UAE"] = "AE",
+        ["Pakistan"] = "PK", ["India"] = "IN", ["Canada"] = "CA", ["Yemen"] = "YE", ["Türkiye"] = "TR", ["Syria"] = "SY",
+        ["Palestine"] = "PS", ["Nigeria"] = "NG", ["Morocco"] = "MA", ["Libya"] = "LY", ["Iraq"] = "IQ", ["Australia"] = "AU",
+        ["Uzbekistan"] = "UZ", ["Tunisia"] = "TN", ["Sweden"] = "SE", ["Sudan"] = "SD", ["Spain"] = "ES", ["Somalia"] = "SO",
+        ["Singapore"] = "SG", ["Senegal"] = "SN", ["Russia"] = "RU", ["Qatar"] = "QA", ["Oman"] = "OM", ["Netherlands"] = "NL",
+        ["Mauritania"] = "MR", ["Malaysia"] = "MY", ["Lebanon"] = "LB", ["Kuwait"] = "KW", ["Kenya"] = "KE", ["Jordan"] = "JO",
+        ["Italy"] = "IT", ["Iran"] = "IR", ["Indonesia"] = "ID", ["Germany"] = "DE", ["France"] = "FR", ["Djibouti"] = "DJ",
+        ["Belgium"] = "BE", ["Bangladesh"] = "BD", ["Bahrain"] = "BH", ["Azerbaijan"] = "AZ", ["Austria"] = "AT",
+        ["Algeria"] = "DZ", ["Afghanistan"] = "AF",
+    };
+
+    // The province or state (ISO 3166-2) of cities in countries whose
+    // holidays differ by region.
+    private static readonly Dictionary<string, string> RegionCodes = new()
+    {
+        ["Toronto"] = "CA-ON", ["Mississauga"] = "CA-ON", ["Montreal"] = "CA-QC",
+        ["New York"] = "US-NY", ["Dearborn"] = "US-MI", ["Chicago"] = "US-IL", ["Houston"] = "US-TX", ["Los Angeles"] = "US-CA",
+        ["Sydney"] = "AU-NSW", ["Melbourne"] = "AU-VIC",
+        ["London"] = "GB-ENG", ["Birmingham"] = "GB-ENG", ["Manchester"] = "GB-ENG",
+        ["Berlin"] = "DE-BE",
+    };
+
+    public static string? CountryCode(OfflineCity city) => CountryCodes.GetValueOrDefault(city.Country);
+    public static string? RegionCode(OfflineCity city) => RegionCodes.GetValueOrDefault(city.Name);
+
+    // The listed city the settings point at - by name and coordinates, so a
+    // place typed in as coordinates under a listed name doesn't count.
+    public static OfflineCity? ForPlace(string name, double latitude, double longitude) =>
+        Find(name) is { } city && Math.Abs(city.Latitude - latitude) < 0.05 && Math.Abs(city.Longitude - longitude) < 0.05 ? city : null;
 }

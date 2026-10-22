@@ -234,8 +234,12 @@ internal static class Snapshot
             lines.Add($"-- the installed dates tool: {(dates == null ? "not found" : dates.Folder)}");
             if (dates != null)
             {
-                var settings = PullTools.EffectiveSettings(dates, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>> { ["dates"] = new() { ["country"] = "CA", ["region"] = "CA-ON" } });
-                var (outcome, file) = PullTools.RunAsync(dates, settings).GetAwaiter().GetResult();
+                // No country or province set: they come from the place (Toronto).
+                var settings = PullTools.EffectiveSettings(dates, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>());
+                var toronto = OfflineCities.Find("Toronto")!;
+                var place = new PullTools.Place(toronto.Name, OfflineCities.CountryCode(toronto), OfflineCities.RegionCode(toronto));
+                lines.Add($"place: {place}");
+                var (outcome, file) = PullTools.RunAsync(dates, settings, place: place).GetAwaiter().GetResult();
                 lines.Add($"dates: {outcome}");
                 if (file != null)
                 {

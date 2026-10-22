@@ -123,7 +123,7 @@ public partial class MainWindow
         {
             ShowLabel($"Pulling {Said(tool)}…", "Running the tool", "⬇", seconds: tool.TimeoutSeconds);
             await Voice.SayAndWaitAsync($"Running the {Said(tool)} tool.", $"بشغل أداة {SaidArabic(tool)}.", TimeSpan.FromSeconds(6));
-            var (outcome, file) = await PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, _settings.PullToolSettings), _settings.VoiceCommandsInArabic);
+            var (outcome, file) = await PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, _settings.PullToolSettings), _settings.VoiceCommandsInArabic, PullPlace());
             if (_closing) return;
             if (outcome != PullTools.Outcome.Done || file == null)
             {
@@ -191,6 +191,14 @@ public partial class MainWindow
                      string.Join(" ", reading.Items.Select((item, i) => $"{i + 1}: {item.OtherText ?? item.Text}"));
         // "Again" reads it once more; "stop" stops it.
         Answer(title, english, arabic, 30);
+    }
+
+    // The prayer-times city, for tools that need a country (public holidays).
+    private PullTools.Place PullPlace()
+    {
+        if (OfflineCities.ForPlace(_settings.City, _settings.Latitude, _settings.Longitude) is not { } city)
+            return new PullTools.Place(null, null, null);
+        return new PullTools.Place(city.Name, OfflineCities.CountryCode(city), OfflineCities.RegionCode(city));
     }
 
     internal void OpenPullTools()

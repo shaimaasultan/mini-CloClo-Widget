@@ -127,16 +127,27 @@ internal static class PullTools
 
     internal enum Outcome { Done, Failed, TimedOut, NoResult }
 
+    // Mini CloClo's own place: the prayer-times city, its country and, where
+    // holidays differ by region, its province or state. Null parts aren't known.
+    internal sealed record Place(string? City, string? Country, string? Region);
+
     // Runs the tool's script, hidden, with its settings file and the result
     // file to write. The settings file also says the voice commands'
-    // language ("en" or "ar"), so a tool can fetch in that language.
-    // Returns the result file's path when it finished well.
-    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, bool arabic = false, CancellationToken cancel = default)
+    // language ("en" or "ar") and Mini CloClo's place, so a tool can fetch
+    // in that language and for that country. Returns the result file's
+    // path when it finished well.
+    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, bool arabic = false,
+        Place? place = null, CancellationToken cancel = default)
     {
         Directory.CreateDirectory(WorkFolder);
         var settingsFile = Path.Combine(WorkFolder, tool.Id + ".settings.json");
         var resultFile = Path.Combine(WorkFolder, tool.Id + ".result.json");
-        File.WriteAllText(settingsFile, JsonSerializer.Serialize(new { language = arabic ? "ar" : "en", settings }, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(settingsFile, JsonSerializer.Serialize(new
+        {
+            language = arabic ? "ar" : "en",
+            place = new { city = place?.City, country = place?.Country, region = place?.Region },
+            settings,
+        }, new JsonSerializerOptions { WriteIndented = true }));
         if (File.Exists(resultFile)) File.Delete(resultFile);
 
         var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))
