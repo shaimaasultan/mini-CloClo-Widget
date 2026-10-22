@@ -198,7 +198,7 @@ internal static class Snapshot
                 lines.Add(line);
             }
             lines.Add("-- what is said --");
-            foreach (var heard in new[] { "Pull fruits.", "Pull the news.", "Pull.", "Pull nooz.", "Pull weather.", "What can I pull?", "اسحب news", "Update fruits.", "Pull dates.", "Pull it.", "Ramadan date.", "Paul nooz.", "Paul Simon.", "Pool fruits." })
+            foreach (var heard in new[] { "Pull fruits.", "Pull the news.", "Pull.", "Pull nooz.", "Pull weather.", "What can I pull?", "اسحب news", "Update fruits.", "Pull dates.", "Pull it.", "Ramadan date.", "Paul nooz.", "Paul Simon.", "Pool fruits.", "Bull fruits.", "Bull the news.", "Bull market.", "Poll fruits.", "Pole news." })
             {
                 var request = PullVoiceCommand.TryParse(heard, tools);
                 lines.Add($"\"{heard}\" -> " + request switch
@@ -223,6 +223,13 @@ internal static class Snapshot
         }
         if (real)
         {
+            foreach (var news in PullTools.Load().Where(t => t.Id == "news"))
+                foreach (var arabic in new[] { false, true })
+                {
+                    var (newsOutcome, newsFile) = PullTools.RunAsync(news, PullTools.EffectiveSettings(news, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>()), arabic).GetAwaiter().GetResult();
+                    var reading = newsFile != null ? PullTools.ReadReading(newsFile) : null;
+                    lines.Add($"-- the news tool ({(arabic ? "Arabic" : "English")}): {newsOutcome}, {reading?.Title ?? "-"}, {reading?.Items.Count ?? 0} headlines");
+                }
             var dates = PullTools.Load().FirstOrDefault(t => t.Id == "dates");
             lines.Add($"-- the installed dates tool: {(dates == null ? "not found" : dates.Folder)}");
             if (dates != null)
@@ -452,6 +459,8 @@ internal static class Snapshot
         var lines = new System.Collections.Generic.List<string>();
         var topics = SampleTopics(DateTime.Today);
         var pullTools = PullTools.Load();
+        var decodeTimes = new System.Collections.Generic.List<double>();
+        lines.Add($"model: {LocalAudioTranscriber.TestModelPath ?? "bundled base"}");
         static string TopicLabel(TopicVoiceCommand.Match match) => match switch
         {
             TopicVoiceCommand.ActionMatch a => a.Action.Word,
@@ -468,6 +477,8 @@ internal static class Snapshot
                 if (samples == null) { lines.Add($"{text} -> (no {(arabic ? "Arabic" : "English")} voice installed)"); continue; }
                 var heard = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic,
                     CallVoiceCommand.RecognitionHint(TestContacts, arabic)).GetAwaiter().GetResult();
+                var decode = LocalAudioTranscriber.LastTestDecode;
+                decodeTimes.Add(decode.TotalSeconds);
                 // Answers to a choose-a-surah question, heard with its own hint.
                 var answer = LocalAudioTranscriber.TranscribeCommandForTestAsync(samples, arabic, prompt: arabic
                     ? QuranVoiceAnswers.ArabicRecognitionPrompt : QuranVoiceAnswers.RecognitionPrompt).GetAwaiter().GetResult();
@@ -484,7 +495,7 @@ internal static class Snapshot
                     : TopicVoiceCommand.TryMatch(heard, topics, loose: true) is { } looseTopic ? "topic (by sound):" + TopicLabel(looseTopic)
                     : WidgetVoiceCommands.TryMatchLoosely(heard, out var loose) ? "widget (loose):" + loose
                     : "NO MATCH";
-                lines.Add($"{text} -> heard \"{heard}\" -> {match}{answers}");
+                lines.Add($"{text} -> heard \"{heard}\" -> {match} ({decode.TotalSeconds:0.00} s){answers}");
             }
             catch (Exception ex)
             {
@@ -493,6 +504,8 @@ internal static class Snapshot
         }
         // Arabic voice mode during a surah question: each answer is read as
         // Arabic and as English, and the clean number wins.
+        if (decodeTimes.Count > 0)
+            lines.Add($"-- command recognition time: average {decodeTimes.Average():0.00} s, slowest {decodeTimes.Max():0.00} s, {decodeTimes.Count} phrases --");
         lines.Add("-- Arabic mode answers, read as Arabic and as English --");
         foreach (var (text, voiceArabic) in new (string, bool)[]
                  {

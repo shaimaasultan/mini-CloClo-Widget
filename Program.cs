@@ -27,7 +27,18 @@ public static class Program
             return Snapshot.BluetoothTest(args[1], args[2], args.Length == 4 ? args[3] : null);
         // A debug test that loads its own copy of the model, so it may run
         // beside an installed Mini CloClo.
-        if (args.Length is 2 or 3 && args[0] == "--voice-test") return Snapshot.VoiceTest(args[1], args.Length == 3 ? args[2] : null);
+        // --voice-test <file> [text] [--model <ggml file>]
+        if (args.Length >= 2 && args[0] == "--voice-test")
+        {
+            var rest = args.Skip(2).ToList();
+            var model = rest.IndexOf("--model");
+            if (model >= 0 && model + 1 < rest.Count)
+            {
+                LocalAudioTranscriber.TestModelPath = rest[model + 1];
+                rest.RemoveRange(model, 2);
+            }
+            return Snapshot.VoiceTest(args[1], rest.FirstOrDefault());
+        }
 #endif
 
         // A sign-in launch waits for Windows' security services without

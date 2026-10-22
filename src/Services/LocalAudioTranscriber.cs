@@ -648,11 +648,24 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
 #if DEBUG
     // Debug builds only (Snapshot --voice-test): the same command recognizer
     // as a live session, run on audio already in memory (16 kHz mono).
+    // --voice-test --model <file>: another ggml model to compare (#36). The
+    // model stays loaded across phrases, and each recognition is timed.
+    internal static string? TestModelPath;
+    private static WhisperFactory? testFactory;
+    internal static TimeSpan LastTestDecode;
+
     internal static async Task<string> TranscribeCommandForTestAsync(float[] samples, bool arabic, string hint = "", string? prompt = null)
     {
         EnsureNativeRuntimeLoaded();
-        var modelBytes = await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, CancellationToken.None);
-        using var factory = WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
+        if (testFactory == null)
+        {
+            var modelBytes = TestModelPath != null
+                ? await File.ReadAllBytesAsync(TestModelPath)
+                : await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, CancellationToken.None);
+            testFactory = WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
+        }
+        var factory = testFactory;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         using var processor = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
             .WithThreads(WhisperThreads.Value)
             .WithPrompt(prompt ?? (arabic ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt : ApprovedVoiceAppLauncher.RecognitionPrompt) + hint)
@@ -664,6 +677,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         var text = new System.Text.StringBuilder();
         await foreach (var segment in processor.ProcessAsync(samples, CancellationToken.None))
             text.Append(TranscriptCleanup.Clean(segment.Text));
+        LastTestDecode = clock.Elapsed;
         return text.ToString();
     }
 #endif
