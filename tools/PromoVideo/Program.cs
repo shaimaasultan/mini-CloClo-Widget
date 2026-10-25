@@ -106,6 +106,7 @@ public static class Program
             .Select(p => (p.Name, TimeZoneInfo.ConvertTime(p.StartsAtUtc, zone).ToString("h:mm tt"))).ToList();
         var (_, fatiha) = QuranText.GetAyah(1, 2);
         var fatihaEnglish = QuranText.GetEnglish(1, 2);
+        var (ramadan, ramadanYear) = NextRamadan(date);
 
         return
         [
@@ -156,10 +157,10 @@ public static class Program
                     }, "3:52 PM"))),
 
             new("quran",
-                "Memorize the Quran, one ayah at a time. The recitation repeats on a loop, and you move on by voice or keyboard: next, previous, or hear the meaning.",
+                "Memorize the Quran, one ayah at a time. Say: Quran surah, to choose any surah and ayat by voice. The recitation repeats on a loop, and you move on with next, or previous.",
                 () => Split(Stack(
                         Text("Quran memorization", 88, Gold, FontWeights.Bold),
-                        Text("Recited on a loop, ayah by ayah.\nSay next, previous — or hear the meaning.", 44, Cream),
+                        Text("Say “Quran surah” to choose any surah.\nRecited on a loop — say next or previous.", 44, Cream),
                         Gap(30),
                         QuranCard(fatiha, fatihaEnglish)),
                     Avatar(v =>
@@ -169,17 +170,48 @@ public static class Program
                     }, "8:05 PM", night: true))),
 
             new("reminders",
-                "Set your own reminders, like drinking water or taking your medicine. Each one is spoken out loud, at the times you choose.",
+                "Your own reminders come right on the clock, and nothing is cut off. If the Quran is playing, a bell rings, the reminder is said, and the recitation carries on.",
                 () => Split(Stack(
-                        Text("Your reminders, spoken", 84, Gold, FontWeights.Bold),
-                        Text("Every 15 minutes to 4 hours,\nduring the hours you choose.", 44, Cream),
+                        Text("Reminders on the clock", 84, Gold, FontWeights.Bold),
+                        Text("A bell, the reminder — then the Quran\ncarries on where it was.", 44, Cream),
                         Gap(30),
-                        CardOf("Reminders", ["⏰  Drink a glass of water — every hour", "💊  Take your medicine — 9 AM to 9 PM", "🚶  Stand up and stretch — every 2 hours"])),
+                        CardOf("Reminders", ["Now       ⏰ Drink a glass of water", "8:00 PM   💊 Evening medicine", "9:00 AM   💊 Vitamin D"])),
                     Avatar(v =>
                     {
                         v.SetCustomReminderActive(true);
-                        v.SetNowPlaying("Drink a glass of water.", "Reminder", "⏰");
+                        v.SetNowPlaying("Drink water.", "Reminder", "⏰");
                     }, "11:00 AM"))),
+
+            new("medicine",
+                "Medicine reminders wait for an answer. Say yes, and it's noted with the time. Say later, and it asks again. And you can always ask: did I take my medicine?",
+                () => Split(Stack(
+                        Text("Did you take it?", 96, Gold, FontWeights.Bold),
+                        Text("Medicine reminders wait for an answer.", 44, Cream),
+                        Gap(36),
+                        Bubble("💊  Evening medicine. Did you take it? Say yes, or later.", right: true),
+                        Bubble("“Later.”", right: false),
+                        Bubble("OK, I'll ask again in 10 minutes.", right: true),
+                        Bubble("“Did I take my medicine?”", right: false)),
+                    Avatar(v =>
+                    {
+                        v.SetCustomReminderActive(true);
+                        v.SetNowPlaying("Evening medicine", "Did you take it?", "💊");
+                    }, "8:00 PM", night: true))),
+
+            new("questions",
+                "Ask your own questions. Ramadan date. When is Ashura? Islamic dates are worked out on your PC, and you can add holidays and answers of your own.",
+                () => Split(Stack(
+                        Text("Your own questions", 92, Gold, FontWeights.Bold),
+                        Text("Islamic dates, holidays —\nand answers you write yourself.", 44, Cream),
+                        Gap(40),
+                        Bubble("“Ramadan date.”", right: false),
+                        Bubble($"Ramadan starts on {ramadan:dddd, MMMM d, yyyy} — 1 Ramadan {ramadanYear}.", right: true),
+                        Bubble("“Again.”", right: false)),
+                    Avatar(v =>
+                    {
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("Ramadan", ramadan.ToString("MMMM d, yyyy"), "💬");
+                    }, "2:15 PM"))),
 
             new("calling",
                 "Say: call Mom. Confirm with yes, and your mobile phone places the call, over Bluetooth.",
@@ -197,23 +229,58 @@ public static class Program
                         v.SetNowPlaying("Calling Mom", "on your phone", "📞");
                     }, "5:30 PM"))),
 
+            new("pull",
+                "Say: pull news, and after you say yes, Keeper reads the latest headlines. Say a number to hear that story.",
+                () => Split(Stack(
+                        Text("Pull the news", 96, Gold, FontWeights.Bold),
+                        Text("Fresh headlines or dates — only\nwhen you ask, and after “yes”.", 44, Cream),
+                        Gap(40),
+                        Bubble("“Pull news.”", right: false),
+                        Bubble("Pull news? This goes online. Say yes, or cancel.", right: true),
+                        Bubble("“Yes.”", right: false),
+                        Bubble("Here it is. 5 items. 1: … Say a number to hear more.", right: true)),
+                    Avatar(v =>
+                    {
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("Pulled news", "5 headlines", "⬇");
+                    }, "9:10 AM"))),
+
+            new("search",
+                "Say: search Spotify, or search YouTube, and what to look for. Keeper reads the top results, and plays the one you choose. Then just say: pause the song, or next song.",
+                () => Split(Stack(
+                        Text("Search and play", 96, Gold, FontWeights.Bold),
+                        Text("YouTube or Spotify, by voice.", 44, Cream),
+                        Gap(36),
+                        Bubble("“Search Spotify.”  ·  “Amr Diab.”", right: false),
+                        Bubble("1: Getlak. 2: Lola El Banat. 3: Baba. Which one should I play?", right: true),
+                        Bubble("“Two.”  ·  “Yes.”", right: false),
+                        Bubble("🎵  Playing Lola El Banat.", right: true)),
+                    Avatar(v =>
+                    {
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("Lola El Banat", "Playing on Spotify", "🎵");
+                    }, "7:20 PM", night: true))),
+
             new("keyboard",
-                "Prefer the keyboard? Control plus Alt shortcuts work from any app. T for the time, P for the next prayer, Q for the Quran, K to call someone.",
+                "Prefer the keyboard? Control plus Alt shortcuts work from any app. T for the time, P for the next prayer, Q for the Quran, Y when you've taken your medicine.",
                 () => Split(Stack(
                         Text("Or use the keyboard", 88, Gold, FontWeights.Bold),
                         Text("Ctrl + Alt shortcuts, from any app.", 44, Cream),
                         Gap(36),
                         Keys([("T", "The time"), ("D", "The date"), ("P", "Next prayer"), ("Q", "Quran"),
-                              ("R", "Reminders"), ("K", "Call someone"), ("V", "Talk"), ("H", "Help")])),
+                              ("R", "Reminders"), ("Y", "Medicine taken"), ("I", "Questions"), ("K", "Call someone"),
+                              ("V", "Talk"), ("H", "Help")])),
                     Avatar(v => v.SetNextPrayer("Next: Maghrib 6:18 PM", null), "4:40 PM"))),
 
             new("privacy",
-                "And it's private by design. Mini CloClo never connects to the internet. Speech is recognized on your PC, and nothing you say is ever saved.",
+                "And it's private by design. Mini CloClo itself never connects to the internet. Speech is recognized on your PC, and nothing you say is saved. Only pull and search go online, through other apps, after you say yes.",
                 () => Centered(Stack(
                     Text("🔒", 150, Gold, font: Emoji, center: true),
                     Text("Private by design", 104, Gold, FontWeights.Bold, center: true),
                     Gap(20),
-                    Text("Never connects to the internet.\nSpeech is recognized on your PC.\nNothing you say is ever saved.", 52, Cream, center: true)))),
+                    Text("Mini CloClo never connects to the internet.\nSpeech is recognized on your PC.\nNothing you say is saved.", 52, Cream, center: true),
+                    Gap(10),
+                    Text("Pull and search go online through other apps — after “yes”.", 38, Muted, center: true)))),
 
             new("arabic",
                 "It speaks English and Arabic, and you can choose Keeper, or Lady Keeper.",
@@ -252,6 +319,7 @@ public static class Program
         var times = PrayerTimesCalculator.ForDate(date, 30.04, 31.24, "egyptian", "standard")
             .Select(p => $"{SpokenTime.ArabicPrayerName(p.Name),-8}   {Clock(TimeZoneInfo.ConvertTime(p.StartsAtUtc, zone).DateTime)}").ToArray();
         var (_, fatiha) = QuranText.GetAyah(1, 2);
+        var (ramadan, ramadanYear) = NextRamadan(date);
 
         return
         [
@@ -304,10 +372,10 @@ public static class Program
                     }, "3:52 م"))),
 
             new("quran",
-                "احفظ القرآن آيةً بعد آية. تتكرر التلاوة باستمرار، وتنتقل بصوتك أو بلوحة المفاتيح: الآية التالية، أو السابقة.",
+                "احفظ القرآن آيةً بعد آية. قل: القرآن سورة، لتختار أيَّ سورةٍ وآياتها بصوتك. تتكرر التلاوة باستمرار، وتنتقل بقول: اللي بعده، أو اللي قبله.",
                 () => Split(Stack(
                         Text("حفظ القرآن", 100, Gold, FontWeights.Bold),
-                        Text("تلاوةٌ متكررة، آيةً بعد آية.\nقل: «اللي بعده» أو «اللي قبله».", 46, Cream),
+                        Text("قل «القرآن سورة» لتختار أيَّ سورة.\nتلاوةٌ متكررة — «اللي بعده» أو «اللي قبله».", 46, Cream),
                         Gap(30),
                         QuranCard(fatiha, null)),
                     Avatar(v =>
@@ -318,18 +386,51 @@ public static class Program
                     }, "8:05 م", night: true))),
 
             new("reminders",
-                "اضبط تذكيراتك الخاصة، مثل شرب الماء أو موعد الدواء. وكلُّ تذكيرٍ يُقال بصوتٍ مسموع، في الأوقات التي تختارها.",
+                "تأتي تذكيراتُك في موعدها تماماً، ولا يضيع منها شيء. وإن كان القرآنُ يُتلى، يرنُّ الجرس، ويُقال التذكير، ثم تُكمَل التلاوة من حيث توقفت.",
                 () => Split(Stack(
-                        Text("تذكيراتك، بصوتٍ مسموع", 88, Gold, FontWeights.Bold),
-                        Text("من كلِّ ربع ساعة إلى كلِّ أربع ساعات،\nفي الساعات التي تختارها.", 46, Cream),
+                        Text("تذكيراتٌ في موعدها", 88, Gold, FontWeights.Bold),
+                        Text("جرسٌ، ثم التذكير — ثم يُكمل القرآن\nمن حيث توقف.", 46, Cream),
                         Gap(30),
-                        CardOf("التذكيرات", ["⏰  اشرب كوب ماء — كل ساعة", "💊  موعد الدواء — من 9 ص إلى 9 م", "🚶  قم وتحرّك — كل ساعتين"])),
+                        CardOf("التذكيرات", ["الآن       ⏰ اشرب كوب ماء", "8:00 م    💊 دواء المساء", "9:00 ص    💊 فيتامين د"])),
                     Avatar(v =>
                     {
                         v.SetArabicDates(true);
                         v.SetCustomReminderActive(true);
                         v.SetNowPlaying("اشرب كوب ماء.", "تذكير", "⏰");
                     }, "11:00 ص"))),
+
+            new("medicine",
+                "تذكيراتُ الدواء تنتظر إجابتك. قل: نعم، فيُسجَّل الوقت. وقل: بعدين، فيسألك مرةً أخرى. ويمكنك أن تسأل دائماً: خدت الدوا؟",
+                () => Split(Stack(
+                        Text("أخذتَ الدواء؟", 100, Gold, FontWeights.Bold),
+                        Text("تذكيراتُ الدواء تنتظر إجابتك.", 46, Cream),
+                        Gap(36),
+                        Bubble("💊  دواء المساء. خدته؟ قول نعم، أو بعدين.", right: true),
+                        Bubble("«بعدين»", right: false),
+                        Bubble("ماشي، هسألك تاني بعد 10 دقايق.", right: true),
+                        Bubble("«خدت الدوا؟»", right: false)),
+                    Avatar(v =>
+                    {
+                        v.SetArabicDates(true);
+                        v.SetCustomReminderActive(true);
+                        v.SetNowPlaying("دواء المساء", "خدته؟", "💊");
+                    }, "8:00 م", night: true))),
+
+            new("questions",
+                "اسأل أسئلتك الخاصة: تاريخ رمضان، امتى عاشوراء؟ تُحسب التواريخ الهجرية على جهازك، ويمكنك أن تضيف العطلات وإجاباتك أنت.",
+                () => Split(Stack(
+                        Text("أسئلتك أنت", 100, Gold, FontWeights.Bold),
+                        Text("التواريخ الهجرية، والعطلات —\nوإجاباتٌ تكتبها بنفسك.", 46, Cream),
+                        Gap(40),
+                        Bubble("«تاريخ رمضان»", right: false),
+                        Bubble($"رمضان يبدأ {ArabicDate(ramadan)} — 1 رمضان {ramadanYear}.", right: true),
+                        Bubble("«قولها تاني»", right: false)),
+                    Avatar(v =>
+                    {
+                        v.SetArabicDates(true);
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("رمضان", ArabicDate(ramadan), "💬");
+                    }, "2:15 م"))),
 
             new("calling",
                 "قل: اتصل بماما. ثم أكِّد بقول: أيوه، فيتّصل هاتفُك المحمول، عبر البلوتوث.",
@@ -348,23 +449,60 @@ public static class Program
                         v.SetNowPlaying("بتصل بماما", "على تليفونك", "📞");
                     }, "5:30 م"))),
 
+            new("pull",
+                "قل: اسحب الأخبار، وبعد أن تقول: نعم، يقرأ لك كيبر أحدث العناوين. قل رقماً لتسمع تفاصيل الخبر.",
+                () => Split(Stack(
+                        Text("اسحب الأخبار", 100, Gold, FontWeights.Bold),
+                        Text("عناوينُ وتواريخُ جديدة — فقط عندما\nتطلب، وبعد «نعم».", 46, Cream),
+                        Gap(40),
+                        Bubble("«اسحب الأخبار»", right: false),
+                        Bubble("أسحب الأخبار؟ ده هيدخل على الإنترنت. قول نعم، أو لا.", right: true),
+                        Bubble("«نعم»", right: false),
+                        Bubble("اتفضل. 5 عناصر. 1: … قول رقم عشان تسمع التفاصيل.", right: true)),
+                    Avatar(v =>
+                    {
+                        v.SetArabicDates(true);
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("الأخبار", "5 عناوين", "⬇");
+                    }, "9:10 ص"))),
+
+            new("search",
+                "قل: ابحث في سبوتيفاي، أو ابحث في يوتيوب، وما تريد أن تبحث عنه. يقرأ لك كيبر أفضل النتائج، ويشغّل ما تختاره. ثم قل فقط: وقف الأغنية، أو الأغنية الجاية.",
+                () => Split(Stack(
+                        Text("ابحث وشغّل", 100, Gold, FontWeights.Bold),
+                        Text("يوتيوب أو سبوتيفاي، بصوتك.", 46, Cream),
+                        Gap(36),
+                        Bubble("«ابحث في سبوتيفاي»  ·  «عمرو دياب»", right: false),
+                        Bubble("1: جيتلك. 2: لولا البنات. 3: بابا. أشغل أنهي واحد؟", right: true),
+                        Bubble("«اتنين»  ·  «نعم»", right: false),
+                        Bubble("🎵  بشغل لولا البنات.", right: true)),
+                    Avatar(v =>
+                    {
+                        v.SetArabicDates(true);
+                        v.SetVoiceStatus("complete");
+                        v.SetNowPlaying("لولا البنات", "شغالة على سبوتيفاي", "🎵");
+                    }, "7:20 م", night: true))),
+
             new("keyboard",
-                "تفضّل لوحة المفاتيح؟ اختصاراتُ كنترول مع ألت تعمل من أي برنامج: حرفُ تي للوقت، وبي للصلاة القادمة، وكيو للقرآن، وكيه للاتصال.",
+                "تفضّل لوحة المفاتيح؟ اختصاراتُ كنترول مع ألت تعمل من أي برنامج: حرفُ تي للوقت، وبي للصلاة القادمة، وكيو للقرآن، وواي عندما تأخذ دواءك.",
                 () => Split(Stack(
                         Text("أو استخدم لوحة المفاتيح", 90, Gold, FontWeights.Bold),
                         Text("اختصارات Ctrl + Alt، من أي برنامج.", 46, Cream),
                         Gap(36),
                         Keys([("T", "الوقت"), ("D", "التاريخ"), ("P", "الصلاة القادمة"), ("Q", "القرآن"),
-                              ("R", "التذكيرات"), ("K", "اتصال"), ("V", "تحدّث"), ("H", "مساعدة")])),
+                              ("R", "التذكيرات"), ("Y", "أخذتُ الدواء"), ("I", "الأسئلة"), ("K", "اتصال"),
+                              ("V", "تحدّث"), ("H", "مساعدة")])),
                     Avatar(v => { v.SetArabicDates(true); v.SetNextPrayer("التالية: المغرب 6:18 م", null); }, "4:40 م"))),
 
             new("privacy",
-                "وهو يحمي خصوصيتك. ميني كلوكلو لا يتصل بالإنترنت أبداً. يُفهَم الكلامُ على جهازك، ولا يُحفَظ أيُّ شيءٍ تقوله.",
+                "وهو يحمي خصوصيتك. ميني كلوكلو نفسه لا يتصل بالإنترنت أبداً. يُفهَم الكلامُ على جهازك، ولا يُحفَظ شيءٌ مما تقوله. والسحبُ والبحثُ وحدهما يدخلان الإنترنت، عبر برامج أخرى، بعد أن تقول: نعم.",
                 () => Centered(Stack(
                     Text("🔒", 150, Gold, font: Emoji, center: true),
                     Text("خصوصيتك محفوظة", 110, Gold, FontWeights.Bold, center: true),
                     Gap(20),
-                    Text("لا يتصل بالإنترنت أبداً.\nيُفهَم الكلام على جهازك.\nولا يُحفَظ أيُّ شيءٍ تقوله.", 56, Cream, center: true)))),
+                    Text("ميني كلوكلو لا يتصل بالإنترنت أبداً.\nيُفهَم الكلام على جهازك.\nولا يُحفَظ شيءٌ مما تقوله.", 56, Cream, center: true),
+                    Gap(10),
+                    Text("السحب والبحث يدخلان الإنترنت عبر برامج أخرى — بعد «نعم».", 40, Muted, center: true)))),
 
             new("languages",
                 "يتحدّث العربية والإنجليزية، ويمكنك أن تختار كيبر، أو ليدي كيبر.",
@@ -390,6 +528,25 @@ public static class Program
                     Gap(20),
                     Text("github.com/shaimaasultan/mini-CloClo-Widget", 38, Muted, center: true, rtl: false)))),
         ];
+    }
+
+    // The next 1 Ramadan, by Windows' Umm al-Qura calendar - the same
+    // calendar the app answers "Ramadan date" with.
+    private static (DateTime Date, int HijriYear) NextRamadan(DateTime today)
+    {
+        var hijri = new System.Globalization.UmAlQuraCalendar();
+        var year = hijri.GetYear(today);
+        var start = hijri.ToDateTime(year, 9, 1, 0, 0, 0, 0);
+        if (start < today) start = hijri.ToDateTime(++year, 9, 1, 0, 0, 0, 0);
+        return (start, year);
+    }
+
+    // "الاثنين 8 فبراير 2027"
+    private static string ArabicDate(DateTime day)
+    {
+        string[] days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        string[] months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+        return $"{days[(int)day.DayOfWeek]} {day.Day} {months[day.Month - 1]} {day.Year}";
     }
 
     // ------------------------------------------------------------ drawing

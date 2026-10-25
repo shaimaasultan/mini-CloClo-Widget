@@ -22,12 +22,12 @@ can't see the screen well. It keeps only:
 
 ## Watch it
 
-[![Mini CloClo — watch the video (1:53)](docs/video/promo-thumbnail.png)](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo.mp4)
+[![Mini CloClo — watch the video (2:53)](docs/video/promo-thumbnail.png)](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.6.0/MiniCloClo-promo.mp4)
 
-▶ [Watch the video in English](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo.mp4) (1:53) ·
-[شاهد الفيديو بالعربية](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.0.0/MiniCloClo-promo-ar.mp4) (2:19, narrated by Hoda).
+▶ [Watch the video in English](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.6.0/MiniCloClo-promo.mp4) (2:53) ·
+[شاهد الفيديو بالعربية](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/download/v1.6.0/MiniCloClo-promo-ar.mp4) (3:33, narrated by Hoda).
 Both have captions, so they work with the sound off. They're attached to the
-[1.0 release](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.0.0).
+[1.6 release](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.6.0).
 
 There is no weather, no location lookup and no internet in Mini CloClo
 itself: the build fails if any code tries to go online
