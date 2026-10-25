@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 using System;
 using System.IO;
 using System.Linq;
@@ -150,6 +150,92 @@ internal static class Snapshot
     // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
     // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
     // is missed - and the log answers, in a throwaway folder.
+    public static int SearchTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string> { "-- search commands --" };
+        foreach (var heard in new[]
+                 {
+                     "Search.", "Search YouTube.", "Search on Spotify.", "Search YouTube for Amr Diab.", "Search for Amr Diab Baba.", "Search us put it for you.", "Search Spotifai.", "Search something nice.",
+                     "ابحث", "ابحث في يوتيوب", "ابحث في سبوتيفاي عن عمرو دياب", "دورلي علي اليوتيوب", "Find me a song.", "Look up YouTube.",
+                     "What time is it?", "Pull news.", "Quran surah.",
+                 })
+        {
+            var r = SearchVoiceCommand.TryParse(heard);
+            lines.Add($"\"{heard}\" -> {(r == null ? "-" : $"app {r.App?.ToString() ?? "ask"}, words {r.Words ?? "ask"}")}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
+        }
+        lines.Add("-- which app? --");
+        foreach (var heard in new[] { "YouTube.", "You Tube", "Spotify.", "Spotifai.", "On Spotify.", "يوتيوب", "سبوتيفاي", "سبوتفاي", "Netflix.", "Yes." })
+            lines.Add($"\"{heard}\" -> {SearchVoiceCommand.App(heard)?.ToString() ?? "-"}");
+        lines.Add("-- words --");
+        foreach (var heard in new[] { "Amr Diab, Baba.", "  عمرو دياب يارب يكون عجبهم. ", "?" })
+            lines.Add($"\"{heard}\" -> [{SearchVoiceCommand.Words(heard) ?? "-"}]");
+        lines.Add("-- choosing --");
+        foreach (var heard in new[] { "Two.", "2", "Number 3.", "Play the first one.", "The second one.", "اتنين", "شغل التاني", "رقم 4", "Next.", "التالي", "Again.", "One more time." })
+            lines.Add($"\"{heard}\" -> number {SearchVoiceCommand.Choice(heard)?.ToString() ?? "-"}, next {SearchVoiceCommand.IsNextOne(heard)}, again {SearchVoiceCommand.IsAgain(heard)}");
+        lines.Add("-- controls (and what they'd otherwise be) --");
+        foreach (var heard in new[] { "Pause the song.", "Resume.", "Next song.", "Previous song.", "وقف الأغنية", "كمل الأغنية", "الأغنية الجاية", "Pause.", "Next.", "Stop." })
+            lines.Add($"\"{heard}\" -> {SearchVoiceCommand.TryControl(heard)?.ToString() ?? "-"}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
+        lines.Add("-- YouTube results from a saved page (links in order) --");
+        var links = new (string, string)[]
+        {
+            ("Your channel", "https://www.youtube.com/@someone"),
+            ("Raaz e Dil", "https://www.googleadservices.com/pagead/aclk?sa=L&ai=x"),
+            ("Watch", "https://www.youtube.com/watch?v=qr9viv4A33s"),
+            ("Amr Diab - Baba (Official Lyric Video) | (كلمات) عمرو دياب - بابا 3 minutes, 19 seconds", "https://www.youtube.com/watch?v=3knHALzEC7M&pp=ygUN"),
+            ("Amr Diab - Baba | عمرو دياب - بابا 3 minutes, 19 seconds", "https://www.youtube.com/watch?v=6e1ROHNUCXk&pp=ygUN"),
+            ("Go to channel Mohamed El Husseiny | Director", "https://www.youtube.com/@elhusseinyofficial"),
+            ("Mohamed El Husseiny | Director", "https://www.youtube.com/@elhusseinyofficial"),
+            ("Your headcount doubled. Your HR team didn't.", "https://www.youtube.com/watch?v=H2FY5uftD1k"),
+            ("Mix - Amr Diab - Baba (Official Lyric Video)", "https://www.youtube.com/watch?v=3knHALzEC7M&list=RD3knHA"),
+            ("Amr Diab - Baba (Official Lyric Video) · 3:19", "https://www.youtube.com/watch?v=3knHALzEC7M&list=RD3kn"),
+            ("A Short 45 seconds", "https://www.youtube.com/shorts/abcdefghijk"),
+            ("Amr Diab - Baba (Official Lyric Video) | (كلمات) عمرو دياب - بابا 3 minutes, 19 seconds", "https://www.youtube.com/watch?v=3knHALzEC7M&pp=again"),
+            ("Best of Amr Diab | أجمل اغاني عمرو دياب 59 minutes", "https://www.youtube.com/watch?v=FF10_N6qqYg&t=7s&pp=yg"),
+            ("Go to channel Mazzika - مزيكا", "https://www.youtube.com/@Mazzika"),
+            ("Live concert 1 hour, 2 minutes, 5 seconds", "https://www.youtube.com/watch?v=JPzYmo_PT12"),
+            ("Go to channel Rotana", "https://www.youtube.com/@rotanamusic"),
+        };
+        foreach (var (result, index) in MediaSearch.YouTubeResults(links, 5))
+            lines.Add($"link {index}: {result.Title} | by {result.By ?? "-"} | {result.Length} | {result.Address}");
+        lines.Add("-- Spotify songs from saved play buttons --");
+        foreach (var name in new[] { "Play Getlak by Amr Diab", "Play Lola El Banat by Amr Diab, Orange", "Play Stand by Me by Ben E. King", "Play", "Play Haga Tanya", "Add to playlist" })
+            lines.Add($"\"{name}\" -> {(MediaSearch.SpotifySong(name) is { } song ? $"{song.Title} | by {song.By}" : "-")}");
+        lines.Add($"address: {MediaSearch.YouTubeAddress("عمرو دياب & Baba")}");
+        lines.Add($"address: {MediaSearch.SpotifyAddress("Amr Diab")}");
+        lines.Add($"installed: YouTube (Edge) {MediaSearch.IsInstalled(SearchApp.YouTube)}, Spotify {MediaSearch.IsInstalled(SearchApp.Spotify)}");
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
+    // "MiniCloClo.exe --search-live <youtube|spotify> <words> <report file>":
+    // opens the app on its results and reads them - nothing is played.
+    public static int SearchLive(string app, string words, string reportPath, int playAfterSeconds = -1)
+    {
+        var searchApp = app.Equals("spotify", StringComparison.OrdinalIgnoreCase) ? SearchApp.Spotify : SearchApp.YouTube;
+        var lines = new System.Collections.Generic.List<string>();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        MediaSearch.Trace = note => { lock (lines) lines.Add($"  {clock.Elapsed.TotalSeconds:0.0} s: {note}"); };
+        var error = MediaSearch.OpenAsync(searchApp, words).GetAwaiter().GetResult();
+        lines.Add($"  {clock.Elapsed.TotalSeconds:0.0} s: opened");
+        lines.Add($"open: {error ?? "ok"}");
+        var results = MediaSearch.ReadAsync(searchApp, words, 5, System.Threading.CancellationToken.None).GetAwaiter().GetResult();
+        lines.Add($"read in {clock.Elapsed.TotalSeconds:0.0} s: {results?.Count.ToString() ?? "none"}");
+        foreach (var r in results ?? [])
+            lines.Add($"{r.Title} | by {r.By ?? "-"} | {r.Length ?? "-"} | target {(r.Target != null ? "yes" : "no")}");
+        // With a wait: plays the second result that long after reading -
+        // as after Keeper has read the list - then pauses it.
+        if (playAfterSeconds >= 0 && results is { Count: > 1 })
+        {
+            System.Threading.Thread.Sleep(playAfterSeconds * 1000);
+            var played = MediaSearch.PlayAsync(searchApp, results[1]).GetAwaiter().GetResult();
+            lines.Add($"played after {playAfterSeconds} s: {played}");
+            System.Threading.Thread.Sleep(5000);
+            lines.Add($"paused: {MediaSearch.ControlAsync(SearchVoiceCommand.Control.Pause).GetAwaiter().GetResult()}");
+        }
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     public static int MedicineTest(string reportPath)
     {
         var lines = new System.Collections.Generic.List<string>();

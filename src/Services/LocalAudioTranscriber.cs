@@ -139,10 +139,13 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         {
             EnsureNativeRuntimeLoaded();
             var arabic = languageTag.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+            // "auto": the language is detected - for words to search for (#38),
+            // which may be Arabic or English whatever the voice mode.
+            var detect = languageTag.Equals("auto", StringComparison.OrdinalIgnoreCase);
             var factory = await WarmModel.AcquireAsync(this);
             using var lease = new WarmModel.Lease();
             Volatile.Write(ref _engine, OnGraphicsCard ? "speech model on the graphics card (CUDA)" : "speech model on the processor");
-            var builder = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
+            var builder = factory.CreateBuilder().WithLanguage(detect ? "auto" : arabic ? "ar" : "en")
                 .WithThreads(WhisperThreads.Value);
             if (recognitionPrompt != null)
             {
@@ -152,7 +155,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
                 // matches; Arabic needed 1024 to keep "وقف الصوت" intact. One
                 // short segment bounds the work when noise is decoded.
                 if (recognitionPrompt.Length > 0) builder.WithPrompt(recognitionPrompt);
-                CommandDecoding(builder, arabic);
+                CommandDecoding(builder, arabic || detect);
             }
             else
             {

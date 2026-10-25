@@ -109,13 +109,16 @@ public partial class MainWindow
         // While a choose-a-surah question waits, the hint is surah names and
         // numbers, so an ayah number comes out as digits - and in Arabic the
         // phrase is also read as English, for a number said in English.
+        // The words to search for (#38): no command hints, and in whichever
+        // language they are said.
+        var searchWords = SearchWantsWords;
         var session = new LocalAudioTranscriber(AudioCaptureSource.Microphone,
-            recognitionPrompt: QuranDialogActive
+            recognitionPrompt: searchWords ? "" : ActiveSearch is { Step: SearchStep.App } ? (arabic ? SearchVoiceCommand.ArabicAppPrompt : SearchVoiceCommand.AppPrompt) : QuranDialogActive
                 ? (arabic ? QuranVoiceAnswers.ArabicRecognitionPrompt : QuranVoiceAnswers.RecognitionPrompt)
                 : (arabic
                     ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt
                     : ApprovedVoiceAppLauncher.RecognitionPrompt) + CallVoiceCommand.RecognitionHint(_settings.Contacts, arabic),
-            englishPrompt: QuranDialogActive && arabic ? QuranVoiceAnswers.RecognitionPrompt : null);
+            englishPrompt: QuranDialogActive && arabic && !searchWords ? QuranVoiceAnswers.RecognitionPrompt : null);
         _pushToTalk = session;
         lock (_pushToTalkText)
         {
@@ -147,7 +150,7 @@ public partial class MainWindow
         {
             if (!System.Runtime.Intrinsics.X86.Avx2.IsSupported || !System.Runtime.Intrinsics.X86.Fma.IsSupported)
                 throw new NotSupportedException("Voice commands need a processor with AVX2 and FMA.");
-            await session.StartAsync(arabic ? "ar-EG" : "en-US");
+            await session.StartAsync(searchWords ? "auto" : arabic ? "ar-EG" : "en-US");
             if (_pushToTalk == session && _pushToTalkHeld)
             {
                 ShowLabel("Listening", fromKeyboard
@@ -216,6 +219,8 @@ public partial class MainWindow
         if (!_shutdownAwaitingClose && TryConfirmPendingCall(heard)) return;
         // "Yes" to a "pull dates?" question.
         if (!_shutdownAwaitingClose && TryConfirmPendingPull(heard)) return;
+        // An answer during a search (#38): the app, the words, "yes", a number.
+        if (!_shutdownAwaitingClose && _pendingCall == null && await TryHandleSearchAnswerAsync(heard)) return;
         // "No" / "back" to what Keeper read back during the surah questions -
         // before "no" is taken as cancel and "back" as "previous ayah".
         if (!_shutdownAwaitingClose && _pendingCall == null && await TryGoBackInQuranDialogAsync(heard)) return;
@@ -260,6 +265,10 @@ public partial class MainWindow
         if (TryAnswerTopic(heard, loose: false)) return;
         // "Pull dates": runs a pull tool, after "yes".
         if (TryPullCommand(heard)) return;
+        // "Search" / "search YouTube": asks what for, then opens the app.
+        if (TrySearchCommand(heard)) return;
+        // "Pause the song", "next song": what Spotify or a video plays now.
+        if (await TrySearchControlAsync(heard)) return;
         if (WidgetVoiceCommands.TryMatch(heard, out var command))
         {
             // "A surah" may be "Ashura": an own word that sounds the same wins.

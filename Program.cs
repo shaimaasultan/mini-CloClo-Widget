@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -21,6 +21,9 @@ public static class Program
         if (args.Length == 2 && args[0] == "--prayer-test") return Snapshot.PrayerTest(args[1]);
         if (args.Length == 2 && args[0] == "--load-trace") return Snapshot.LoadTrace(args[1]);
         if (args.Length == 2 && args[0] == "--quran-test") return Snapshot.QuranTest(args[1]);
+        if (args.Length == 2 && args[0] == "--search-test") return Snapshot.SearchTest(args[1]);
+        if (args.Length == 4 && args[0] == "--search-live") return Snapshot.SearchLive(args[1], args[2], args[3]);
+        if (args.Length == 5 && args[0] == "--search-live") return Snapshot.SearchLive(args[1], args[2], args[3], int.Parse(args[4]));
         if (args.Length == 2 && args[0] == "--medicine-test") return Snapshot.MedicineTest(args[1]);
         if (args.Length == 2 && args[0] == "--reminder-test") return Snapshot.ReminderTest(args[1]);
         if (args.Length == 2 && args[0] == "--engine-check") return Snapshot.EngineCheck(args[1]);

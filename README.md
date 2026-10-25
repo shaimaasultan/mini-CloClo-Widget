@@ -133,6 +133,8 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | What topics do I have? / مواضيعي | Lists your topics |
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
+| Search / ابحث (or "search YouTube", "ابحث في سبوتيفاي") | Searches YouTube or Spotify, reads the top results and plays the one you choose ([Search and play](#search-and-play)) — off until turned on |
+| Pause the song, resume, next song, previous song / وقف الأغنية، كمل الأغنية، الأغنية الجاية، الأغنية اللي فاتت | Controls what Spotify or a video plays now |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
@@ -307,6 +309,54 @@ writes a list of topics (the same file *Import…* reads); a `read` tool
 writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 (up to 10 items, read aloud in order).
 
+## Search and play
+
+Search **YouTube** or **Spotify** and play what you choose, without seeing
+the screen:
+
+1. Say **"search"** / **"ابحث"**. Keeper asks *"Which app? YouTube or
+   Spotify?"* — or say **"search YouTube"** / **"ابحث في سبوتيفاي"** to skip
+   that question.
+2. *"What should I search for?"* — say the words, in Arabic or English
+   (*"عمرو دياب بابا"*).
+3. Keeper reads them back: *"Search YouTube for Amr Diab Baba? Say yes, or no
+   to say it again."* A mishearing is caught here; nothing is searched
+   before "yes".
+4. The app opens on its results and Keeper reads **the top 5** — YouTube:
+   *"1: Amr Diab - Baba, from Rotana, 3 minutes."*; Spotify: *"1: Getlak, by
+   Amr Diab."* Ads, playlists ("Mix") and Shorts are skipped.
+5. *"Which one should I play? Say the number."* — **"two"** / **"اتنين"**
+   (or "play the first one", "شغل التاني"); **"again"** reads the list again.
+6. *"Play number 2, Baba?"* — **"yes"** plays it. For a few minutes after,
+   **"next"** plays the next result, or say another number.
+
+While a song or video plays: **"pause the song"**, **"resume"**, **"next
+song"**, **"previous song"** (*"وقف الأغنية"*, *"كمل الأغنية"*, *"الأغنية
+الجاية"*, *"الأغنية اللي فاتت"*) — through Windows' media controls, like the
+keyboard's media keys.
+
+**Turn it on first:** menu → **Search YouTube and Spotify** → *Allow search
+(opens Edge or Spotify)*; the same menu sets how many results are read (1–5).
+YouTube opens in **Microsoft Edge**; Spotify in the **Spotify app** you are
+already signed into (the Microsoft Store one or Spotify's own installer). No
+account or key is needed for Mini CloClo.
+
+**How it reads the results:** the way Narrator does — Windows UI Automation,
+which is part of Windows. Mini CloClo finds the results in the app by what
+they are (YouTube's video links, Spotify's song rows), reads them, and
+presses the one you chose wherever it is on the screen — not a recorded click
+at a fixed place. It only reads what the app already shows, subscribes to no
+events and changes no setting; the results are let go a few minutes after one
+plays. If they can't be read (the page didn't load, the app changed), Keeper
+says so and leaves the app open on them, for someone to choose by hand or
+with Narrator.
+
+**Mini CloClo itself still never goes online.** It builds the search address
+(the words, encoded) and hands it to Edge or Spotify, which go online as they
+do when you search by hand. Edge must be Microsoft-signed, and Spotify is
+reached only through its own package (or its installer's exe, signed by
+Spotify) — not any program that claims the `spotify:` address.
+
 ## What it does on its own
 
 - **Prayer times** are worked out on the PC (Egyptian, Umm al-Qura, Muslim
@@ -446,7 +496,8 @@ dropped after each command.
   prayer times, Quran, reminders, contacts and calls.
 - `src/Services/` — prayer times and the offline city list, Quran text and
   progress, speech and the listening chime, the azan library, settings.
-- `src/Platform/` — voice commands and call matching, the right-button hook,
+- `src/Platform/` — voice commands and call matching, search and play
+  (`SearchVoiceCommand`, `MediaSearch`), the right-button hook,
   the Bluetooth dialer, single instance, startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check and
   the firewall rules.
@@ -474,6 +525,11 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--search-test <file>` checks the search phrases, the app and number
+  answers, the music controls, and reading results from saved YouTube links
+  and Spotify buttons (offline).
+- `--search-live <youtube|spotify> <words> <file>` opens the app on a search
+  and reads the top results, with the reader's timings — nothing is played.
 - `--pull-test <file> [real]` runs local test pull tools (import, read, a
   failure, a time-out, no result — none goes online) and checks what is said;
   with `real`, the dates tool also runs once.

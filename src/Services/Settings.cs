@@ -81,6 +81,11 @@ public class WidgetSettings
     // person's own values for each tool's settings, by tool folder name.
     public bool AllowPullCommands { get; set; }
     public Dictionary<string, Dictionary<string, string>> PullToolSettings { get; set; } = new();
+    // "Search" (#38): off until turned on, since it opens Edge or Spotify
+    // online; and how many results Keeper reads.
+    public bool AllowSearch { get; set; }
+    public int SearchResultCount { get; set; } = 5;
+    public static readonly int[] SearchResultChoices = [1, 2, 3, 4, 5];
 
     public static double RoundCoordinate(double value) => Math.Round(value, 2);
 
@@ -184,6 +189,7 @@ public class WidgetSettings
                 .Where(s => System.Text.RegularExpressions.Regex.IsMatch(s.Key, "^[A-Za-z][A-Za-z0-9]{0,29}$") && PullTools.IsSettingValue(s.Value))
                 .Take(20)
                 .ToDictionary(s => s.Key, s => s.Value));
+        SearchResultCount = SearchResultChoices.Contains(SearchResultCount) ? SearchResultCount : 5;
         CustomReminders = (CustomReminders ?? new List<CustomReminderSettings>())
             .Take(MaxCustomReminders)
             .Select(reminder => reminder?.ValidateAndNormalize())

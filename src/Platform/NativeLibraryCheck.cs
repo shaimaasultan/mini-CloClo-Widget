@@ -59,6 +59,25 @@ public static class NativeLibraryCheck
     // Windows or Program Files locations. Reuse the existing signature check.
     internal static bool IsTrustedMicrosoftExecutable(string path) => IsMicrosoftSigned(path);
 
+    // Spotify from its own installer (search, #38): its signature trusted by
+    // Windows and made out to Spotify AB, since it lives in the user's own
+    // folder where another program could put a file of the same name.
+    internal static bool IsSignedBySpotify(string path)
+    {
+        if (WinVerifyTrustFile(path) != 0) return false;
+        try
+        {
+#pragma warning disable SYSLIB0057 // only the signer certificate is read; the file's integrity came from WinVerifyTrust
+            using var signer = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+#pragma warning restore SYSLIB0057
+            return signer.Subject.Split(',').Select(part => part.Trim()).Contains("O=Spotify AB");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     // A data file packed and signed at install (a Quran recitation pack): its
     // signature must be intact and its signer the exe's own certificate; an
     // unsigned exe accepts only an unsigned pack. CloClo's certificate is
