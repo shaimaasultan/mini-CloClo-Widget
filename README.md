@@ -4,13 +4,18 @@ A small, **offline** version of the CloClo desktop widget, made for someone who
 can't see the screen well. It keeps only:
 
 - **Voice commands** — talk to it instead of looking for it.
-- **Custom reminders** — spoken out loud.
+- **Custom reminders** — spoken out loud, on the clock; medicine reminders
+  wait for "yes, I took it".
 - **Prayer times and azan** — announced out loud, then the azan (a built-in
   recording, or your own).
 - **Quran memorization** — recitation on a loop, controlled by keyboard or voice.
 - **Calling** — "call Mom" places a call on your mobile phone over Bluetooth.
 - **Your own questions and answers** — "Ramadan date", "when is Civic
   Holiday?": Islamic dates worked out on the PC, holidays and your own notes.
+- **Pull** — "pull dates", "pull news": fresh dates or headlines, after "yes"
+  (off until turned on).
+- **Search and play** — "search YouTube", "search Spotify": the top results
+  read aloud, and the one you choose played (off until turned on).
 - **The avatar**, which changes with what's happening (prayer clothes, reading
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
 - **The time and date** — large, plus the Hijri date and the next prayer.
@@ -24,8 +29,11 @@ can't see the screen well. It keeps only:
 Both have captions, so they work with the sound off. They're attached to the
 [1.0 release](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.0.0).
 
-There is no weather, no location lookup and no internet at all: the build
-fails if any code tries to go online (`scripts/check-no-network.ps1`). The one
+There is no weather, no location lookup and no internet in Mini CloClo
+itself: the build fails if any code tries to go online
+(`scripts/check-no-network.ps1`). The two features that need the internet
+hand it to something else, after you say yes: [Pull](#pull) runs a separate
+script, and [Search and play](#search-and-play) opens Edge or Spotify. The one
 connection it can make is over Bluetooth, to your own paired phone, and only
 while placing a call you asked for (see [Calling](#calling)). Everything it
 shows is also spoken, and everything can be reached without the mouse. The
@@ -327,8 +335,9 @@ the screen:
    Amr Diab."* Ads, playlists ("Mix") and Shorts are skipped.
 5. *"Which one should I play? Say the number."* — **"two"** / **"اتنين"**
    (or "play the first one", "شغل التاني"); **"again"** reads the list again.
-6. *"Play number 2, Baba?"* — **"yes"** plays it. For a few minutes after,
-   **"next"** plays the next result, or say another number.
+6. *"Play number 2, Baba?"* — **"yes"** plays it; **"no"** asks which one
+   again. For a few minutes after, **"next"** / **"التالي"** plays the next
+   result, or say another number. **"Cancel"** stops the search at any step.
 
 While a song or video plays: **"pause the song"**, **"resume"**, **"next
 song"**, **"previous song"** (*"وقف الأغنية"*, *"كمل الأغنية"*, *"الأغنية
@@ -349,7 +358,9 @@ at a fixed place. It only reads what the app already shows, subscribes to no
 events and changes no setting; the results are let go a few minutes after one
 plays. If they can't be read (the page didn't load, the app changed), Keeper
 says so and leaves the app open on them, for someone to choose by hand or
-with Narrator.
+with Narrator. The results are recognized by the English wording YouTube and
+Spotify use ("3 minutes, 19 seconds", "Play … by …"), so those apps should be
+in English; the songs and videos themselves can be in any language.
 
 **Mini CloClo itself still never goes online.** It builds the search address
 (the words, encoded) and hands it to Edge or Spotify, which go online as they
