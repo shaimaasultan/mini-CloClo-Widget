@@ -246,19 +246,19 @@ public partial class MainWindow : Window
     {
         var keys = _hotkeysRegistered
             ? " Keyboard shortcuts, from any app, with Control and Alt: T the time, D the date, P the next prayer, A all prayer times, " +
-              "Q the Quran, R reminders, K contacts and calls, I questions and answers, V talk, S stop sounds, M the menu, and H this help."
+              "Q the Quran, R reminders, K contacts and calls, I questions and answers, Y medicine taken, V talk, S stop sounds, M the menu, and H this help."
             : "";
         var keysArabic = _hotkeysRegistered
-            ? " اختصارات لوحة المفاتيح مع كنترول وألت: T الساعة، D التاريخ، P الصلاة الجاية، A كل المواقيت، Q القرآن، R التذكيرات، K جهات الاتصال، I الأسئلة والأجوبة، V الكلام، S إيقاف الصوت، M القائمة، H المساعدة."
+            ? " اختصارات لوحة المفاتيح مع كنترول وألت: T الساعة، D التاريخ، P الصلاة الجاية، A كل المواقيت، Q القرآن، R التذكيرات، K جهات الاتصال، I الأسئلة والأجوبة، Y خدت الدوا، V الكلام، S إيقاف الصوت، M القائمة، H المساعدة."
             : "";
         var talk = _settings.PushToTalkEnabled ? "Hold the right mouse button anywhere for a second" : "Press Control Alt V";
         var talkArabic = _settings.PushToTalkEnabled ? "دوس كليك يمين مطول في أي مكان" : "دوس كنترول ألت V";
         ShowLabel("Help", "Say: time, date, next prayer, Quran, reminders, stop", "❔");
         Voice.Say($"{talk}, wait for the short chime, then say a command: what time is it, the date, next prayer, prayer times, " +
-                  "Quran, Quran surah, next, previous, reminders, call and a name, your own questions like Ramadan date, say it again, what topics do I have, pull dates, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
+                  "Quran, Quran surah, next, previous, reminders, call and a name, your own questions like Ramadan date, say it again, what topics do I have, pull dates, did I take my medicine, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
                   "or shut down." + keys,
             $"{talkArabic}، استنى صوت التنبيه القصير، وبعدين قول أمر: الساعة كام، التاريخ، الصلاة الجاية، مواقيت الصلاة، " +
-            "القرآن، القرآن سورة، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، أسئلتك زي تاريخ رمضان، قولها تاني، مواضيعي، اسحب التواريخ، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
+            "القرآن، القرآن سورة، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، أسئلتك زي تاريخ رمضان، قولها تاني، مواضيعي، اسحب التواريخ، خدت الدوا، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
             "أو اقفل الجهاز." + keysArabic);
     }
 
@@ -471,11 +471,18 @@ public partial class MainWindow : Window
             reminder.LastFired = slot;
             changed = true;
             if (!say) continue; // missed while the PC was asleep or off
+            if (reminder.WaitForAnswer)
+            {
+                // Medicine (#29): asked about until "yes" - MedicineTick.
+                _medicine.Due(reminder, slot, now);
+                continue;
+            }
             Announce(new Announcement(Announcement.Kinds.Reminder,
                 reminder.Speak ? reminder.Message : "", reminder.Speak ? reminder.Message : "", now,
                 reminder.PlayAudio ? reminder.AudioPath : null));
         }
         if (changed) _settings.Save();
+        MedicineTick(now);
         QuranReminderTick(now);
     }
 

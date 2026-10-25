@@ -62,7 +62,8 @@ public partial class MainWindow
         try
         {
             ShowAnnouncementLabel(items);
-            if (items.Any(i => i.Kind != Announcement.Kinds.Hour)) await Earcon.ReminderAsync();
+            if (items.Any(i => i.Kind == Announcement.Kinds.Medicine)) await Earcon.MedicineAsync();
+            else if (items.Any(i => i.Kind != Announcement.Kinds.Hour)) await Earcon.ReminderAsync();
             // A reminder's own sound first (the azan still comes first: it
             // holds the queue).
             foreach (var path in items.Select(i => i.AudioPath).Where(p => p != null).Distinct())
@@ -90,7 +91,7 @@ public partial class MainWindow
 
     private void ShowAnnouncementLabel(IReadOnlyList<Announcement> items)
     {
-        var reminders = items.Where(i => i.Kind == Announcement.Kinds.Reminder).ToList();
+        var reminders = items.Where(i => i.Kind is Announcement.Kinds.Reminder or Announcement.Kinds.Medicine).ToList();
         if (reminders.Count > 0)
         {
             ShowLabel(reminders[0].English, reminders.Count == 1 ? "Reminder" : $"Reminder 1 of {reminders.Count}", "⏰", seconds: 30);

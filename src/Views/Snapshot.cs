@@ -147,6 +147,81 @@ internal static class Snapshot
         return topics.Select(t => t.ValidateAndNormalize()!).ToList();
     }
 
+    // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
+    // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
+    // is missed - and the log answers, in a throwaway folder.
+    public static int MedicineTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        MedicineLog.FolderOverride = Path.Combine(Path.GetTempPath(), "MiniCloClo-medicine-test");
+        try
+        {
+            if (File.Exists(Path.Combine(MedicineLog.FolderOverride, "medicine-log.json")))
+                File.Delete(Path.Combine(MedicineLog.FolderOverride, "medicine-log.json"));
+            var day = new DateTime(2026, 10, 26);
+            var tablet = new CustomReminderSettings { Message = "Blood pressure tablet", IntervalMinutes = 720, StartHour = 8, EndHour = 21, WaitForAnswer = true }.ValidateAndNormalize();
+            var vitamin = new CustomReminderSettings { Message = "Vitamin D", IntervalMinutes = 1440, StartHour = 8, EndHour = 9, WaitForAnswer = true }.ValidateAndNormalize();
+            var reminders = new[] { tablet, vitamin };
+            var start = day.AddHours(7.5);
+            foreach (var r in reminders) ReminderSchedule.Start(r, start);
+            var tracker = new MedicineTracker();
+            for (var t = start; t <= day.AddHours(22); t = t.AddSeconds(20))
+            {
+                foreach (var r in reminders)
+                {
+                    var (due, say, slot) = ReminderSchedule.Check(r, t);
+                    if (!due) continue;
+                    r.LastFired = slot;
+                    if (say) tracker.Due(r, slot, t);
+                }
+                // The person's answers.
+                if (t == day.AddHours(8).AddMinutes(7))
+                {
+                    lines.Add($"{t:HH:mm:ss}  person: \"Later.\" (later: {MedicineTracker.IsLater("Later.")})");
+                    tracker.Later(t);
+                }
+                if (t == day.AddHours(8).AddMinutes(18))
+                {
+                    lines.Add($"{t:HH:mm:ss}  person: \"Yes, I took it.\" (yes: {CallVoiceCommand.IsYes("Yes, I took it.")})");
+                    foreach (var dose in tracker.Taken())
+                    {
+                        MedicineLog.Record(dose.Message, dose.Due, MedicineLog.Taken, t);
+                        lines.Add($"{t:HH:mm:ss}  logged taken: {dose.Message} ({dose.Due:HH:mm} dose)");
+                    }
+                }
+                var (ask, missed) = tracker.Tick(t);
+                foreach (var dose in missed)
+                {
+                    MedicineLog.Record(dose.Message, dose.Due, MedicineLog.Missed, t);
+                    lines.Add($"{t:HH:mm:ss}  logged missed: {dose.Message} ({dose.Due:HH:mm} dose), asked {dose.Asked} times");
+                }
+                if (ask.Count > 0) lines.Add($"{t:HH:mm:ss}  Keeper: Reminder: {MedicineTracker.Question(ask).English}");
+            }
+            var evening = day.AddHours(22);
+            foreach (var question in new[] { "Did I take my medicine?", "Did I take my medicine this morning?", "When did I last take my medicine?", "خدت الدوا؟" })
+            {
+                var (english, arabic) = MedicineLog.Answer(reminders.Select(r => r.Message).ToList(), question, evening);
+                lines.Add($"\"{question}\" -> {english}");
+                if (question.StartsWith("خدت")) lines.Add($"    {arabic}");
+            }
+            lines.Add("-- answers --");
+            foreach (var heard in new[] { "Yes.", "نعم", "Later.", "بعدين", "Not yet.", "لسه", "No.", "What time is it?", "Cancel." })
+                lines.Add($"\"{heard}\" -> yes {CallVoiceCommand.IsYes(heard)}, later {MedicineTracker.IsLater(heard)}, cancel {ApprovedVoiceAppLauncher.IsCancelCommand(heard)}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
+            foreach (var heard in new[] { "Did I take my medicine?", "خدت الدوا؟", "When did I last take my medicine?" })
+                lines.Add($"\"{heard}\" -> command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"{ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            MedicineLog.FolderOverride = null;
+        }
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --reminder-test <report file>": a fake clock through a
     // day (#39), ticking every 20 s like the app: four reminders and the
     // hourly time, with a restart, the azan, a long prayer look and the PC
@@ -215,6 +290,18 @@ internal static class Snapshot
                      "It's 3:00 PM.",
                  })
             lines.Add($"{Voice.Sentences(text).Length} parts: " + string.Join(" | ", Voice.Sentences(text)));
+        lines.Add("-- next time, shown in the reminders window --");
+        var monday = new DateTime(2026, 10, 26);
+        foreach (var (label, reminder) in new (string, CustomReminderSettings)[]
+                 {
+                     ("hourly 9-17", new CustomReminderSettings { Message = "Water", IntervalMinutes = 60, StartHour = 9, EndHour = 17 }),
+                     ("90 min 9-17", new CustomReminderSettings { Message = "Stretch", IntervalMinutes = 90, StartHour = 9, EndHour = 17 }),
+                     ("daily at 8", new CustomReminderSettings { Message = "Morning medicine", IntervalMinutes = 1440, StartHour = 8, EndHour = 9 }),
+                     ("3 h 22-6", new CustomReminderSettings { Message = "Night", IntervalMinutes = 180, StartHour = 22, EndHour = 6 }),
+                     ("off", new CustomReminderSettings { Message = "Off", IntervalMinutes = 60, StartHour = 9, EndHour = 17, Enabled = false }),
+                 })
+            foreach (var at in new[] { 7.5, 9.0, 10.75, 16.5, 23.5 })
+                lines.Add($"{label,-12} at {monday.AddHours(at):HH:mm}: {ReminderSchedule.NextLabel(reminder, monday.AddHours(at))}");
         File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
         return 0;
     }

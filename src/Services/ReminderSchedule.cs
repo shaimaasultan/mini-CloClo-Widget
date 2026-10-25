@@ -37,6 +37,30 @@ internal static class ReminderSchedule
     public static void Start(CustomReminderSettings reminder, DateTime now) =>
         reminder.LastFired ??= LatestSlot(reminder, now) ?? now;
 
+    // The next time it will fire after now, or null when it is off. Each
+    // day's slots start again at the start hour and stop at the end hour.
+    public static DateTime? Next(CustomReminderSettings reminder, DateTime now)
+    {
+        if (!reminder.Enabled) return null;
+        var hours = (reminder.EndHour - reminder.StartHour + 24) % 24;
+        var span = TimeSpan.FromHours(hours == 0 ? 24 : hours);
+        for (var day = now.Date.AddDays(-1); day <= now.Date.AddDays(2); day = day.AddDays(1))
+        {
+            var start = day.AddHours(reminder.StartHour);
+            for (var slot = start; slot < start + span; slot = slot.AddMinutes(reminder.IntervalMinutes))
+                if (slot > now && (reminder.LastFired is not { } last || slot > last)) return slot;
+        }
+        return null;
+    }
+
+    // "Next: today at 3:00 PM", "Next: tomorrow at 8:00 AM", "Off".
+    public static string NextLabel(CustomReminderSettings reminder, DateTime now)
+    {
+        if (Next(reminder, now) is not { } next) return "Off";
+        var day = next.Date == now.Date ? "today" : next.Date == now.Date.AddDays(1) ? "tomorrow" : next.ToString("dddd");
+        return $"Next: {day} at {SpokenTime.English(next)}";
+    }
+
     // Whether a slot is due now (not fired yet), and whether to say it (it
     // isn't too late). A due slot is recorded as fired either way.
     public static (bool Due, bool Say, DateTime Slot) Check(CustomReminderSettings reminder, DateTime now)
@@ -52,7 +76,7 @@ internal static class ReminderSchedule
 internal sealed record Announcement(Announcement.Kinds Kind, string English, string Arabic, DateTime Created,
     string? AudioPath = null)
 {
-    public enum Kinds { Hour, Reminder, Quran }
+    public enum Kinds { Hour, Reminder, Medicine, Quran }
 
     // How long an item may wait (held by the azan, a long prayer look...)
     // before it is dropped, so there is never a backlog: the time of day is
@@ -87,6 +111,12 @@ internal sealed record Announcement(Announcement.Kinds Kind, string English, str
         {
             english.Add("Reminders: " + string.Join(" ", reminders.Select(r => Sentence(r.English))));
             arabic.Add("تذكيرات: " + string.Join(" ", reminders.Select(r => Sentence(r.Arabic))));
+        }
+        // Medicine (#29): the question, already worded (MedicineTracker.Question).
+        foreach (var medicine in items.Where(i => i.Kind == Kinds.Medicine).Take(1))
+        {
+            english.Add((reminders.Count == 0 ? "Reminder: " : "") + medicine.English);
+            arabic.Add((reminders.Count == 0 ? "تذكير: " : "") + medicine.Arabic);
         }
         foreach (var quran in items.Where(i => i.Kind == Kinds.Quran).Take(1))
         {

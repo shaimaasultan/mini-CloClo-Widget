@@ -18,6 +18,9 @@ public static class Earcon
     // lower than the listening chime so the two aren't confused.
     public static Task ReminderAsync() => PlayAsync((988, 0.16), (740, 0.24));
 
+    // Before a medicine question (#29): the reminder bell, rung twice.
+    public static Task MedicineAsync() => PlayAsync((988, 0.12), (740, 0.16), (988, 0.12), (740, 0.2));
+
     // Each note is a sine with a short fade in and out (no clicks), played
     // one after another. Completes when playback ends, at most a second.
     private static async Task PlayAsync(params (double Frequency, double Seconds)[] notes)

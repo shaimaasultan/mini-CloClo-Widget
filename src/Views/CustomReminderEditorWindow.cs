@@ -20,6 +20,9 @@ internal sealed class CustomReminderEditorWindow : Window
     private readonly CheckBox _enabled = new() { Content = "Reminder _on", Margin = new Thickness(0, 10, 0, 0) };
     private readonly CheckBox _speak = new() { Content = "_Say the message out loud", Margin = new Thickness(0, 6, 0, 0) };
     private readonly CheckBox _playAudio = new() { Content = "_Play a sound file first", Margin = new Thickness(0, 6, 0, 0) };
+    private readonly CheckBox _waitForAnswer = new() { Content = "_Wait for an answer (for medicine): ask until I say yes", Margin = new Thickness(0, 10, 0, 0) };
+    private readonly ComboBox _askAgain = new() { MinWidth = 120 };
+    private readonly ComboBox _askFor = new() { MinWidth = 120 };
     private readonly TextBlock _audioName = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _audioStatus = new() { TextWrapping = TextWrapping.Wrap };
     private readonly LocalAudioPlayer _preview = new();
@@ -66,6 +69,11 @@ internal sealed class CustomReminderEditorWindow : Window
         _speak.IsChecked = Reminder.Speak;
         _playAudio.IsChecked = Reminder.PlayAudio;
         _audioPath = Reminder.AudioPath;
+        foreach (var minutes in CustomReminderSettings.AskAgainChoices) _askAgain.Items.Add($"{minutes} minutes");
+        foreach (var minutes in CustomReminderSettings.AskForChoices) _askFor.Items.Add(minutes < 60 ? $"{minutes} minutes" : minutes == 60 ? "1 hour" : $"{minutes / 60} hours");
+        _askAgain.SelectedIndex = System.Array.IndexOf(CustomReminderSettings.AskAgainChoices, Reminder.AskAgainMinutes);
+        _askFor.SelectedIndex = System.Array.IndexOf(CustomReminderSettings.AskForChoices, Reminder.AskForMinutes);
+        _waitForAnswer.IsChecked = Reminder.WaitForAnswer;
         UpdateAudioName();
 
         var content = new StackPanel { Margin = new Thickness(18) };
@@ -81,6 +89,23 @@ internal sealed class CustomReminderEditorWindow : Window
         content.Children.Add(_enabled);
         content.Children.Add(_speak);
         content.Children.Add(_playAudio);
+        // Medicine (#29): "Did you take it?" until "yes"; logged.
+        content.Children.Add(_waitForAnswer);
+        var asking = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(22, 6, 0, 0) };
+        asking.Children.Add(Labelled("Ask a_gain every", _askAgain));
+        var askFor = Labelled("Stop asking a_fter", _askFor);
+        askFor.Margin = new Thickness(16, 0, 0, 0);
+        asking.Children.Add(askFor);
+        content.Children.Add(asking);
+        void UpdateAsking() => asking.IsEnabled = _waitForAnswer.IsChecked == true;
+        _waitForAnswer.Click += (_, _) =>
+        {
+            UpdateAsking();
+            Voice.Say(_waitForAnswer.IsChecked == true
+                ? "Wait for an answer: on. Keeper will ask did you take it, until you say yes, and keep a log."
+                : "Wait for an answer: off.");
+        };
+        UpdateAsking();
 
         var audioControls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 4) };
         var chooseAudio = new Button { Content = "_Choose sound…", Padding = new Thickness(10, 5, 10, 5) };
@@ -192,6 +217,11 @@ internal sealed class CustomReminderEditorWindow : Window
             Speak = _speak.IsChecked == true,
             PlayAudio = _playAudio.IsChecked == true,
             AudioPath = _audioPath,
+            WaitForAnswer = _waitForAnswer.IsChecked == true,
+            AskAgainMinutes = CustomReminderSettings.AskAgainChoices[System.Math.Max(0, _askAgain.SelectedIndex)],
+            AskForMinutes = CustomReminderSettings.AskForChoices[System.Math.Max(0, _askFor.SelectedIndex)],
+            // Same times: keep its place (#39); new times start afresh.
+            LastFired = interval == Reminder.IntervalMinutes && start == Reminder.StartHour && end == Reminder.EndHour ? Reminder.LastFired : null,
         };
         DialogResult = true;
     }

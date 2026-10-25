@@ -12,9 +12,9 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Label Target="{Binding ElementName=ReminderList}" Padding="0" Margin="0,0,0,10">
-            <AccessText TextWrapping="Wrap" Text="Your _reminders. Each one is said out loud, and shown, every so often during its active hours." />
+            <AccessText TextWrapping="Wrap" Text="Your _reminders. Each one is said out loud, and shown, every so often during its active hours. The next one is at the top." />
         </Label>
-        <ListBox x:Name="ReminderList" Grid.Row="1" SelectionChanged="ReminderList_SelectionChanged"
+        <ListBox x:Name="ReminderList" HorizontalContentAlignment="Stretch" Grid.IsSharedSizeScope="True" Grid.Row="1" SelectionChanged="ReminderList_SelectionChanged"
                  AutomationProperties.Name="Reminders" MouseDoubleClick="EditButton_Click">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
@@ -24,10 +24,17 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Message}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Description}" FontSize="12.5" Opacity="0.75" TextWrapping="Wrap" />
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Next" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding NextTime}" Margin="0,0,16,0" FontWeight="SemiBold" VerticalAlignment="Top" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Message}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Description}" FontSize="12.5" Opacity="0.75" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

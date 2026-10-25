@@ -31,6 +31,7 @@ public partial class MainWindow
         ('R', OpenCustomReminders),
         ('K', OpenContacts),
         ('I', OpenTopics),
+        ('Y', MedicineTaken),
         ('V', ToggleKeyboardVoiceCommand),
         ('S', () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
         ('M', OpenMenu),

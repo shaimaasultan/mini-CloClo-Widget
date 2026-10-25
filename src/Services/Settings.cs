@@ -244,7 +244,7 @@ public class WidgetSettings
 
 public sealed class CustomReminderSettings
 {
-    public static readonly int[] IntervalChoices = { 15, 30, 45, 60, 90, 120, 180, 240 };
+    public static readonly int[] IntervalChoices = { 15, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720, 1440 };
 
     public string Message { get; set; } = "Drink a glass of water.";
     public int IntervalMinutes { get; set; } = 60;
@@ -258,6 +258,14 @@ public sealed class CustomReminderSettings
     // The last scheduled time it fired (local time), kept so a restart or
     // reinstall doesn't start its count again (#39). Null: not started.
     public DateTime? LastFired { get; set; }
+    // A medicine reminder (#29): asks "Did you take it?" and again every
+    // AskAgainMinutes until "yes", for at most AskForMinutes, then the dose
+    // is logged as missed.
+    public bool WaitForAnswer { get; set; }
+    public int AskAgainMinutes { get; set; } = 5;
+    public int AskForMinutes { get; set; } = 60;
+    public static readonly int[] AskAgainChoices = { 5, 10, 15 };
+    public static readonly int[] AskForChoices = { 30, 60, 120 };
 
     public CustomReminderSettings ValidateAndNormalize()
     {
@@ -267,6 +275,8 @@ public sealed class CustomReminderSettings
             Message = Message.Trim();
 
         if (!IntervalChoices.Contains(IntervalMinutes)) IntervalMinutes = 60;
+        if (!AskAgainChoices.Contains(AskAgainMinutes)) AskAgainMinutes = 5;
+        if (!AskForChoices.Contains(AskForMinutes)) AskForMinutes = 60;
         // A time in the future (a changed clock) would hold it back: start over.
         if (LastFired is { } last && last > DateTime.Now.AddMinutes(1)) LastFired = null;
         if (StartHour is < 0 or > 23) StartHour = 9;
@@ -290,21 +300,30 @@ public sealed class CustomReminderSettings
         AudioPath = AudioPath,
         Enabled = Enabled,
         LastFired = LastFired,
+        WaitForAnswer = WaitForAnswer,
+        AskAgainMinutes = AskAgainMinutes,
+        AskForMinutes = AskForMinutes,
     };
 
     public static string IntervalLabel(int minutes) =>
-        minutes < 60 ? $"{minutes} minutes" : minutes == 60 ? "1 hour" : minutes % 60 == 0 ? $"{minutes / 60} hours" : $"{minutes / 60.0:0.#} hours";
+        minutes < 60 ? $"{minutes} minutes" : minutes == 60 ? "1 hour" : minutes == 1440 ? "24 hours (once a day)"
+        : minutes % 60 == 0 ? $"{minutes / 60} hours" : $"{minutes / 60.0:0.#} hours";
 
     // What a screen reader says for the reminder in the list.
     [System.Text.Json.Serialization.JsonIgnore]
-    public string Spoken => $"{Message}. {Describe()}";
+    public string Spoken => $"{NextTime}. {Message}. {Describe()}";
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string Description => Describe();
 
+    // When it fires next, beside it in the reminders window.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string NextTime => ReminderSchedule.NextLabel(this, DateTime.Now);
+
     public string Describe() =>
         $"Every {IntervalLabel(IntervalMinutes)}, from {StartHour:00}:00 to {EndHour:00}:00, " +
         (PlayAudio ? "plays a sound, " : "") + (Speak ? "spoken" : "shown only") +
+        (WaitForAnswer ? ", medicine: waits for an answer" : "") +
         $", {(Enabled ? "on" : "off")}";
 }
 

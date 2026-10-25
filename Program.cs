@@ -21,6 +21,7 @@ public static class Program
         if (args.Length == 2 && args[0] == "--prayer-test") return Snapshot.PrayerTest(args[1]);
         if (args.Length == 2 && args[0] == "--load-trace") return Snapshot.LoadTrace(args[1]);
         if (args.Length == 2 && args[0] == "--quran-test") return Snapshot.QuranTest(args[1]);
+        if (args.Length == 2 && args[0] == "--medicine-test") return Snapshot.MedicineTest(args[1]);
         if (args.Length == 2 && args[0] == "--reminder-test") return Snapshot.ReminderTest(args[1]);
         if (args.Length == 2 && args[0] == "--engine-check") return Snapshot.EngineCheck(args[1]);
         if (args.Length is 2 or 3 && args[0] == "--pull-test") return Snapshot.PullTest(args[1], args.Length == 3 && args[2] == "real");

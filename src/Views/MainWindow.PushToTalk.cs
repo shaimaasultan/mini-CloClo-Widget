@@ -99,7 +99,10 @@ public partial class MainWindow
         // Talking to CloClo is always on purpose, so it ends a recitation,
         // the azan or speech in progress rather than waiting for it (the
         // microphone would hear it otherwise). "Quran" starts the recitation
-        // again.
+        // again; an answer to a medicine question carries it on by itself
+        // (#29), from the ayah it was on.
+        _recitationBeforeTalk = _quranWindow is { IsReciting: true } reciting && reciting.PauseRecitation() is { } ayah
+            ? (reciting, ayah) : null;
         if (CloCloSoundPlaying || _voicePausedForAudio || SpeechReader.IsSpeaking) StopSounds();
 
         var arabic = _settings.VoiceCommandsInArabic;
@@ -216,10 +219,12 @@ public partial class MainWindow
         // "No" / "back" to what Keeper read back during the surah questions -
         // before "no" is taken as cancel and "back" as "previous ayah".
         if (!_shutdownAwaitingClose && _pendingCall == null && await TryGoBackInQuranDialogAsync(heard)) return;
+        // "Yes" / "later" to "Did you take your medicine?" (#29).
+        if (!_shutdownAwaitingClose && _pendingCall == null && TryAnswerMedicine(heard)) return;
         if (ApprovedVoiceAppLauncher.IsCancelCommand(heard))
         {
             if (await CancelShutdownByUserAsync()) return;
-            if (CancelPendingCall() || CancelPendingPull() || CancelQuranDialog())
+            if (CancelPendingCall() || CancelPendingPull() || CancelQuranDialog() || CancelMedicine())
             {
                 Keeper.SetVoiceStatus("complete");
                 return;
@@ -260,7 +265,7 @@ public partial class MainWindow
             // "A surah" may be "Ashura": an own word that sounds the same wins.
             if (command == WidgetVoiceCommand.ChooseSurah && TryAnswerTopic(heard, loose: true, sameSound: true)) return;
             Keeper.SetVoiceStatus("complete");
-            RunWidgetCommand(command);
+            RunWidgetCommand(command, heard);
             return;
         }
         if (!ApprovedVoiceAppLauncher.TryMatchHeldCommand(heard, out var app))
@@ -274,7 +279,7 @@ public partial class MainWindow
             if (WidgetVoiceCommands.TryMatchLoosely(heard, out var looseCommand))
             {
                 Keeper.SetVoiceStatus("complete");
-                RunWidgetCommand(looseCommand);
+                RunWidgetCommand(looseCommand, heard);
                 return;
             }
             Keeper.SetVoiceStatus("failed");
@@ -296,7 +301,7 @@ public partial class MainWindow
             await SpeakPushToTalkStepAsync($"Could not open {name}.", $"تعذر فتح {arabicName}.");
     }
 
-    private void RunWidgetCommand(WidgetVoiceCommand command)
+    private void RunWidgetCommand(WidgetVoiceCommand command, string heard = "")
     {
         switch (command)
         {
@@ -315,6 +320,7 @@ public partial class MainWindow
                 break;
             case WidgetVoiceCommand.Prayed: MarkPrayed(); break;
             case WidgetVoiceCommand.SayAgain: SayLastAnswerAgain(); break;
+            case WidgetVoiceCommand.MedicineLog: SayMedicineLog(heard); break;
         }
     }
 

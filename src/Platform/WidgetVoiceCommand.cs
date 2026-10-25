@@ -9,7 +9,7 @@ namespace MiniCloClo;
 // only these fixed phrases count (compared after the same cleanup, with the
 // wake name, "please" and "now" tolerated); the transcript is never used as
 // anything but a key into this table.
-internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain }
+internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain, MedicineLog }
 
 internal static class WidgetVoiceCommands
 {
@@ -75,6 +75,14 @@ internal static class WidgetVoiceCommands
             "again", "say it again", "say that again", "say again", "date again", "the date again", "one more time",
             "repeat that", "repeat it", "repeat the date", "tell me again", "what was that", "pardon",
             "تاني", "قولها تاني", "قوله تاني", "قول تاني", "قولي تاني", "كمان مره", "مره كمان", "التاريخ تاني", "عيدها", "عيدها تاني",
+        ]),
+        // The medicine log (#29).
+        (WidgetVoiceCommand.MedicineLog, [
+            "did i take my medicine", "did i take my medicine today", "did i take my medicine this morning", "did i take my medication",
+            "did i take my pills", "did i take my tablet", "when did i last take my medicine", "when did i take my medicine",
+            "medicine log", "my medicine", "my medicine log", "medicine today",
+            "خدت الدوا", "انا خدت الدوا", "خدت الدوا النهارده", "خدت الدوا الصبح", "امتي خدت الدوا", "اخر مره خدت الدوا",
+            "الدوا", "سجل الدوا", "خدت العلاج", "خدت الحبايه",
         ]),
         (WidgetVoiceCommand.Prayed, [
             "i prayed", "i ve prayed", "i have prayed", "done praying", "prayed", "i finished praying",

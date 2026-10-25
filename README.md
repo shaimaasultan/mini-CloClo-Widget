@@ -129,6 +129,7 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Help / مساعدة | Says the commands and shortcuts |
 | Ramadan date / تاريخ رمضان (any of your own words) | Answers with what you entered, or the next date ([Questions and answers](#questions-and-answers)) |
 | Again / قولها تاني | Says the last answer to your own question again |
+| Did I take my medicine? / خدت الدوا؟ | Reads the medicine log: each dose today, taken (when) or missed |
 | What topics do I have? / مواضيعي | Lists your topics |
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
@@ -158,6 +159,7 @@ noisy microphone from a misheard word.
 | **R** | Custom reminders |
 | **K** | Contacts and calls |
 | **I** | Questions and answers |
+| **Y** | Medicine taken (answers "Did you take it?") |
 | **V** | Talk (press again when done) |
 | **S** | Stop sounds |
 | **M** | The menu (opens with the keyboard in it) |
@@ -318,7 +320,9 @@ writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 - **Custom reminders** (up to 10): a message, how often (15 minutes to 4
   hours) and active hours. Each is spoken, and can play a sound file first.
   Open them with the ⏰ icon, Ctrl+Alt+R or by saying "reminders"; **Add**
-  makes a new one and **Say it now** tries it out.
+  makes a new one and **Say it now** tries it out. Each one shows when it
+  comes next (*"Next: today at 3:00 PM"*), and the list is in that order:
+  the next one at the top, those turned off at the bottom.
 
   They come **on the clock**: at the start hour and every interval after it
   (every hour from 9 → 9:00, 10:00…; every 90 minutes → 9:00, 10:30,
@@ -330,6 +334,21 @@ writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
   and they wait, instead of being lost, while the azan plays, a recitation is
   on, Keeper is speaking or you're answering a question (a reminder waits up
   to an hour, the hourly time 5 minutes).
+
+  **Medicine reminders** wait for an answer: turn on *Wait for an answer (for
+  medicine)* in a reminder, choose how often to ask again (5–15 minutes) and
+  for how long (30 minutes–2 hours), and pick its times (every 6, 8, 12 or 24
+  hours, e.g. 8:00 and 20:00). At its time Keeper rings the bell twice and
+  asks *"Blood pressure tablet. Did you take it? Say yes, or later."* — and
+  again every few minutes until **"yes" / "نعم"** (logged as taken, with the
+  time; also **Ctrl+Alt+Y**). **"Later" / "بعدين" / "not yet" / "لسه"** asks
+  again in 10 minutes, **"cancel"** stops asking (logged as skipped), and when
+  the time runs out the dose is logged as **missed**. Ask **"Did I take my
+  medicine?"** (or "…this morning?", "When did I last take my medicine?",
+  "خدت الدوا؟") to hear the log. It's kept 30 days in
+  `%APPDATA%\MiniCloClo\medicine-log.json`, on this PC only. Answering
+  stops a Quran recitation only for that moment: it carries on from the same
+  ayah after Keeper's reply.
 
   | Your reminders | Adding a reminder |
   |---|---|
