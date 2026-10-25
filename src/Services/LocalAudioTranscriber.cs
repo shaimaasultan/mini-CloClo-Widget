@@ -141,7 +141,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
             var arabic = languageTag.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
             var factory = await WarmModel.AcquireAsync(this);
             using var lease = new WarmModel.Lease();
-            Volatile.Write(ref _engine, "base model on the CPU");
+            Volatile.Write(ref _engine, OnGraphicsCard ? "speech model on the graphics card (CUDA)" : "speech model on the processor");
             var builder = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
                 .WithThreads(WhisperThreads.Value);
             if (recognitionPrompt != null)
@@ -152,9 +152,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
                 // matches; Arabic needed 1024 to keep "وقف الصوت" intact. One
                 // short segment bounds the work when noise is decoded.
                 if (recognitionPrompt.Length > 0) builder.WithPrompt(recognitionPrompt);
-                builder.WithAudioContextSize(arabic ? 1024 : 512)
-                    .WithSingleSegment()
-                    .WithMaxTokensPerSegment(32);
+                CommandDecoding(builder, arabic);
             }
             else
             {
@@ -168,8 +166,7 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
             }
             using var processor = builder.Build();
             using var englishProcessor = arabic && recognitionPrompt != null && englishPrompt != null
-                ? factory.CreateBuilder().WithLanguage("en").WithThreads(WhisperThreads.Value).WithPrompt(englishPrompt)
-                    .WithAudioContextSize(512).WithSingleSegment().WithMaxTokensPerSegment(32).Build()
+                ? CommandDecoding(factory.CreateBuilder().WithLanguage("en").WithThreads(WhisperThreads.Value).WithPrompt(englishPrompt), arabic: false).Build()
                 : null;
             // Live preview for dictation and playback: a fast greedy pass over
             // the phrase so far, with a 10-second audio window. On the test
@@ -463,8 +460,8 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         // SingleInstance.cs); a copy without the lock never gets its own.
         if (Program.Instance?.IsHeld != true)
             throw new InvalidOperationException("CloClo doesn't hold the single-instance lock, so it can't load a speech model.");
-        var modelBytes = await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, _stop.Token);
-        return WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
+        var modelBytes = await PlaybackModelStore.ReadVerifiedBytesAsync(PlaybackModelStore.Current, _stop.Token);
+        return WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = OnGraphicsCard });
     }
 
     // Loads the speech model ahead of the first command (at startup) and
@@ -595,14 +592,52 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetLogicalProcessorInformation(IntPtr buffer, ref int length);
 
+    // How a voice command is decoded. On the processor: greedy, with a short
+    // audio window, so it answers promptly. On the graphics card (#36) there
+    // is time to be careful: beam search over 5 candidates and the full
+    // 30-second window, which mishears less, for a fraction of a second.
+    private static WhisperProcessorBuilder CommandDecoding(WhisperProcessorBuilder builder, bool arabic)
+    {
+        if (OnGraphicsCard) builder.WithBeamSearchSamplingStrategy(beam => beam.WithBeamSize(5));
+        else builder.WithAudioContextSize(arabic ? 1024 : 512);
+        return builder.WithSingleSegment().WithMaxTokensPerSegment(32);
+    }
+
     private static readonly string[] CpuRuntime =
         ["ggml-base-whisper.dll", "ggml-cpu-whisper.dll", "ggml-whisper.dll", "whisper.dll"];
+    // The CUDA build (#36), in the cuda folder: NVIDIA's cuBLAS first (cuBLASLt
+    // before cuBLAS, which imports it), then the same set with the CUDA backend.
+    private static readonly string[] CudaRuntime =
+        ["cublasLt64_13.dll", "cublas64_13.dll", "ggml-base-whisper.dll", "ggml-cpu-whisper.dll", "ggml-cuda-whisper.dll", "ggml-whisper.dll", "whisper.dll"];
+
+    // True when the model runs on an NVIDIA graphics card (CUDA).
+    internal static bool OnGraphicsCard { get; private set; }
+
     private static void EnsureNativeRuntimeLoaded()
     {
         lock (RuntimeLock)
         {
             if (runtimeHandles != null) return;
 
+            // The graphics card when the CUDA files are installed and the
+            // NVIDIA driver is present (nvcuda.dll, from System32 only);
+            // otherwise - or if any of it fails to load - the processor.
+            var cuda = Path.Combine(AppContext.BaseDirectory, "cuda");
+            var driver = Path.Combine(Environment.SystemDirectory, "nvcuda.dll");
+            if (File.Exists(driver) && CudaRuntime.All(name => File.Exists(Path.Combine(cuda, name))))
+            {
+                try
+                {
+                    runtimeHandles = LoadRuntime(cuda, driver, CudaRuntime);
+                    RuntimeOptions.LoadedLibrary = RuntimeLibrary.Cuda;
+                    OnGraphicsCard = true;
+                    return;
+                }
+                catch
+                {
+                    // LoadRuntime has freed what it loaded: use the processor.
+                }
+            }
             runtimeHandles = LoadRuntime(AppContext.BaseDirectory, null, CpuRuntime);
             RuntimeOptions.LoadedLibrary = RuntimeLibrary.Cpu;
         }
@@ -617,8 +652,8 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         var loaded = new List<IntPtr>();
         try
         {
-            // vulkan-1.dll by its System32 path first, so the GPU runtime's
-            // import binds to it instead of a same-named file elsewhere.
+            // The GPU driver (nvcuda.dll) by its System32 path first, so the
+            // GPU runtime binds to it instead of a same-named file elsewhere.
             if (systemLibrary != null) loaded.Add(NativeLibrary.Load(systemLibrary));
             foreach (var name in names)
             {
@@ -661,18 +696,15 @@ internal sealed class LocalAudioTranscriber(AudioCaptureSource source, bool redu
         {
             var modelBytes = TestModelPath != null
                 ? await File.ReadAllBytesAsync(TestModelPath)
-                : await PlaybackModelStore.ReadVerifiedBytesAsync(SpeechModel.Base, CancellationToken.None);
-            testFactory = WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = false });
+                : await PlaybackModelStore.ReadVerifiedBytesAsync(PlaybackModelStore.Current, CancellationToken.None);
+            testFactory = WhisperFactory.FromBuffer(modelBytes, new WhisperFactoryOptions { UseGpu = OnGraphicsCard });
         }
         var factory = testFactory;
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var processor = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
+        var builderForTest = factory.CreateBuilder().WithLanguage(arabic ? "ar" : "en")
             .WithThreads(WhisperThreads.Value)
-            .WithPrompt(prompt ?? (arabic ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt : ApprovedVoiceAppLauncher.RecognitionPrompt) + hint)
-            .WithAudioContextSize(arabic ? 1024 : 512)
-            .WithSingleSegment()
-            .WithMaxTokensPerSegment(32)
-            .Build();
+            .WithPrompt(prompt ?? (arabic ? ApprovedVoiceAppLauncher.ArabicRecognitionPrompt : ApprovedVoiceAppLauncher.RecognitionPrompt) + hint);
+        using var processor = CommandDecoding(builderForTest, arabic).Build();
         if (samples.Length < MinimumWhisperSamples) Array.Resize(ref samples, MinimumWhisperSamples);
         var text = new System.Text.StringBuilder();
         await foreach (var segment in processor.ProcessAsync(samples, CancellationToken.None))

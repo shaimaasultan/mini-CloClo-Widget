@@ -38,12 +38,22 @@ non-commercial use. It is not covered by the MIT License.
 
 ## Speech recognition
 
-- **Whisper** *base* model (`Assets/Models/ggml-base.bin`), © OpenAI, MIT
-  License — [github.com/openai/whisper](https://github.com/openai/whisper),
-  in the ggml format of [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
+- **Whisper** *large-v3-turbo* model, 5-bit quantized
+  (`ggml-large-v3-turbo-q5_0.bin`, fetched by `scripts/Get-SpeechFiles.ps1`
+  and attached to the speech-model-1 release), and the earlier *base* model
+  (`Assets/Models/ggml-base.bin`), © OpenAI, MIT License —
+  [github.com/openai/whisper](https://github.com/openai/whisper), in the
+  ggml format of [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
   (MIT License, © The ggml authors).
-- **Whisper.net** and its native runtime, © Sandro Hanea, MIT License —
-  [github.com/sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net).
+- **Whisper.net** and its native runtimes (CPU and CUDA), © Sandro Hanea, MIT
+  License — [github.com/sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net).
+- **NVIDIA cuBLAS** 13.8.0.4 (`cublas64_13.dll`, `cublasLt64_13.dll`), ©
+  NVIDIA Corporation, redistributed under the
+  [NVIDIA CUDA Toolkit End User License Agreement](https://docs.nvidia.com/cuda/eula/)
+  (Attachment A). Not part of this repository: `scripts/Get-SpeechFiles.ps1`
+  downloads it from NVIDIA's redistributable archive, and Mini CloClo's
+  install includes it so the speech model can run on an NVIDIA graphics card.
+  It is not covered by the MIT License.
 
 ## Audio
 

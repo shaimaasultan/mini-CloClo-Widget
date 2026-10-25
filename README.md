@@ -37,15 +37,32 @@ Narrator.
 - Windows 10 version 2004 or later, or Windows 11, 64-bit.
 - For voice commands: a microphone, and a processor with AVX2 and FMA (most
   from 2015 on). Without them everything else still works, by keyboard.
+- **Optional, for faster voice commands:** an NVIDIA graphics card with about
+  1.5 GB of free graphics memory and a current NVIDIA driver. Mini CloClo then
+  runs the speech model on it (CUDA); without one it uses the processor, which
+  answers a few seconds later.
 - For calls: Bluetooth, and a mobile phone paired with the PC.
-- About 360 MB of disk. While running it uses roughly 500–700 MB of memory,
-  most of it the speech model, which is kept loaded so commands start at once.
+- About 1.6 GB of disk (the speech model is 574 MB; the graphics-card files
+  another 700 MB). While running it uses roughly 1–1.5 GB of memory, most of
+  it the speech model, which is kept loaded so commands start at once.
 - To build it: the [.NET 10 SDK](https://dotnet.microsoft.com/download), and
-  [Git LFS](https://git-lfs.com) to get the speech model when cloning.
+  [Git LFS](https://git-lfs.com) for the recitations and videos.
 
 ## Install
 
-Double-click **`scripts\Install-MiniCloClo.cmd`** (as yourself, not as
+First, once: double-click **`scripts\Get-SpeechFiles.cmd`**. It downloads the
+files too big for the repository and checks each one's fingerprint
+(SHA-256) before using it:
+
+- the **Whisper large-v3-turbo** speech model (574 MB), from this
+  repository's [speech-model-1 release](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/speech-model-1)
+  (or the whisper.cpp models on Hugging Face);
+- **NVIDIA's cuBLAS** (548 MB, from NVIDIA's 422 MB download), so the model
+  can run on an NVIDIA graphics card. Without an NVIDIA card, add `-NoCuda`
+  to skip it.
+
+This is the only install step that goes online; Mini CloClo itself never
+does. Then double-click **`scripts\Install-MiniCloClo.cmd`** (as yourself, not as
 administrator). It builds Mini CloClo, installs it into
 `%LOCALAPPDATA%\Programs\MiniCloClo`, adds Start Menu and desktop shortcuts,
 makes it start with Windows and starts it. It needs no .NET installed to run —
@@ -118,9 +135,12 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
 
-Recognition runs on this PC with the bundled Whisper *base* model; what you
-say is never saved or sent. English is recognized more reliably than Arabic
-with this small model. When a command isn't understood, the label under the
+Recognition runs on this PC with the Whisper **large-v3-turbo** model — on
+an NVIDIA graphics card when there is one (CUDA), otherwise on the
+processor; what you say is never saved or sent. On the graphics card each
+command is decoded carefully (beam search over 5 candidates, the full audio
+window), which mishears less; on the processor it is decoded the quick way,
+so it still answers within a few seconds. When a command isn't understood, the label under the
 icons shows **"Heard: …"** — what the recognizer wrote — which helps tell a
 noisy microphone from a misheard word.
 
@@ -183,9 +203,8 @@ nearby, unlocked and with Bluetooth on. If the PC's Bluetooth was off, CloClo
 turns it on for the call and back off afterwards (Windows must allow apps to
 control radios: **Settings → Privacy & security → Radios**); if it was on (a
 Bluetooth headset in use), it leaves it on. Only saved contacts can be called,
-and a voice call is always confirmed first. English names are recognized
-reliably; Arabic is weaker with the small speech model, so the window
-(Ctrl+Alt+K, Enter) is the dependable way for Arabic speakers.
+and a voice call is always confirmed first. The window (Ctrl+Alt+K, Enter)
+is always there as the dependable way when a name keeps being misheard.
 
 ## Questions and answers
 
@@ -428,8 +447,11 @@ Debug builds have these test switches:
 - `--pull-test <file> [real]` runs local test pull tools (import, read, a
   failure, a time-out, no result — none goes online) and checks what is said;
   with `real`, the dates tool also runs once.
-- `--voice-test <file> [text]` runs only the spoken phrases containing that
-  text.
+- `--voice-test <file> [text] [--model <ggml file>]` runs only the spoken
+  phrases containing that text, and can compare another model; every
+  recognition is timed.
+- `--engine-check <file>` says whether the speech model runs on the graphics
+  card or the processor, and times loading it and one recognition.
 - `--load-trace <file>` records which part of the app loads any networking
   library (only WPF's startup and Windows' speech voices do, and none of them
   connects anywhere).

@@ -13,16 +13,23 @@ internal enum SpeechModel
 {
     // Multilingual base: voice commands, English and Arabic, on the CPU.
     Base,
+    // Large v3 turbo, 5-bit quantized: more accurate, slower (#36).
+    LargeV3TurboQ5,
 }
 
 internal static class PlaybackModelStore
 {
+    // The model voice commands use - the one MiniCloClo.csproj bundles.
+    public const SpeechModel Current = SpeechModel.LargeV3TurboQ5;
+
     private sealed record ModelFile(string FileName, long Size, string Sha256);
 
     private static ModelFile Pinned(SpeechModel model) => model switch
     {
         SpeechModel.Base => new("ggml-base.bin", 147951465,
             "60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE"),
+        SpeechModel.LargeV3TurboQ5 => new("ggml-large-v3-turbo-q5_0.bin", 574041195,
+            "394221709CD5AD1F40C46E6031CA61BCE88931E6E088C188294C6D5A55FFA7E2"),
         _ => throw new ArgumentOutOfRangeException(nameof(model)),
     };
 

@@ -147,6 +147,29 @@ internal static class Snapshot
         return topics.Select(t => t.ValidateAndNormalize()!).ToList();
     }
 
+    // "MiniCloClo.exe --engine-check <report file>": which speech runtime
+    // loads (graphics card or processor) and how long loading the model and
+    // one recognition of a second of silence take (#36).
+    public static int EngineCheck(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        try
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var text = LocalAudioTranscriber.TranscribeCommandForTestAsync(new float[16000], arabic: false).GetAwaiter().GetResult();
+            lines.Add($"runtime: {(LocalAudioTranscriber.OnGraphicsCard ? "graphics card (CUDA)" : "processor")}");
+            lines.Add($"model load + first recognition: {clock.Elapsed.TotalSeconds:0.0} s");
+            text = LocalAudioTranscriber.TranscribeCommandForTestAsync(new float[16000], arabic: false).GetAwaiter().GetResult();
+            lines.Add($"second recognition: {LocalAudioTranscriber.LastTestDecode.TotalSeconds:0.00} s");
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"{ex.GetType().Name}: {ex.Message}");
+        }
+        File.WriteAllLines(reportPath, lines);
+        return 0;
+    }
+
     // "MiniCloClo.exe --pull-test <report file> [real]": pull tools (#35) on
     // local test tools that don't go online - one that imports, one that
     // reads, one that fails, one that runs too long, one that writes nothing
@@ -210,6 +233,8 @@ internal static class Snapshot
                     _ => "-",
                 });
             }
+            foreach (var heard in new[] { "Two.", "2", "Number 2.", "One four.", "اتنين", "رقم ٣", "One more time.", "Again.", "Two news.", "Call Mom." })
+                lines.Add($"number alone \"{heard}\" -> {QuranVoiceAnswers.NumberAlone(heard)?.ToString() ?? "-"}");
             foreach (var word in new[] { "Pull", "Pull news", "Update", "Mango" })
                 lines.Add($"own word \"{word}\" -> {TopicVoiceCommand.Clash(word) ?? "free"}");
         }

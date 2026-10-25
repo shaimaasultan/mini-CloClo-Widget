@@ -27,6 +27,10 @@
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- tools\ holds separate projects (the promo video maker), not app code. -->
+    <!-- The bundled Whisper model (#36): its file in Assets\Models and its
+         SHA-256, checked here at build time and again by PlaybackModelStore. -->
+    <SpeechModelFile>ggml-large-v3-turbo-q5_0.bin</SpeechModelFile>
+    <SpeechModelSha256>394221709CD5AD1F40C46E6031CA61BCE88931E6E088C188294C6D5A55FFA7E2</SpeechModelSha256>
     <DefaultItemExcludes>$(DefaultItemExcludes);tools\**;pull\**</DefaultItemExcludes>
   </PropertyGroup>
 
@@ -36,6 +40,10 @@
     <!-- The CPU runtime is copied as four explicit win-x64 files below. Its
          default build target copies other architectures into subdirectories. -->
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" GeneratePathProperty="true" ExcludeAssets="build" />
+    <!-- The CUDA build of the same runtime (#36), for NVIDIA graphics cards:
+         copied, checked, into a cuda folder below; the CPU one stays the
+         fallback. -->
+    <PackageReference Include="Whisper.net.Runtime.Cuda.Windows" Version="1.9.1" GeneratePathProperty="true" ExcludeAssets="build" />
   </ItemGroup>
 
   <!-- The Quran text, surah names and Saheeh International's English meaning,
@@ -50,7 +58,7 @@
   <!-- The speech model is inert data beside the exe; PlaybackModelStore
        checks its size and SHA-256 before Whisper gets it. -->
   <ItemGroup>
-    <Content Include="Assets\Models\ggml-base.bin" Link="ggml-base.bin"
+    <Content Include="Assets\Models\$(SpeechModelFile)" Link="$(SpeechModelFile)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Remove="Assets\Recitations\**" />
     <!-- The built-in azan recordings, in an Azan folder beside the exe
@@ -70,12 +78,12 @@
   </ItemGroup>
 
   <Target Name="VerifyBundledWhisperModel" BeforeTargets="CoreCompile">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Assets\Models\ggml-base.bin')"
-           Text="The Whisper speech model Assets\Models\ggml-base.bin is missing." />
-    <GetFileHash Files="$(MSBuildProjectDirectory)\Assets\Models\ggml-base.bin" Algorithm="SHA256">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Assets\Models\$(SpeechModelFile)')"
+           Text="The Whisper speech model Assets\Models\$(SpeechModelFile) is missing. Run scripts\Get-SpeechFiles.cmd first." />
+    <GetFileHash Files="$(MSBuildProjectDirectory)\Assets\Models\$(SpeechModelFile)" Algorithm="SHA256">
       <Output TaskParameter="Items" ItemName="_BundledModelHash" />
     </GetFileHash>
-    <Error Condition="'%(_BundledModelHash.FileHash)' != '60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE'"
+    <Error Condition="'%(_BundledModelHash.FileHash)' != '$(SpeechModelSha256)'"
            Text="The Whisper speech model is incomplete or altered." />
   </Target>
 
@@ -96,6 +104,32 @@
     </GetFileHash>
     <Error Condition="'%(_WhisperSourceHash.FileHash)' != '%(_WhisperSourceHash.ExpectedHash)'"
            Text="Whisper CPU runtime differs from the pinned 1.9.1 package: %(_WhisperSourceHash.Identity)" />
+  </Target>
+
+  <!-- The CUDA runtime (#36): the same Whisper DLLs built for NVIDIA cards,
+       from the pinned Whisper.net.Runtime.Cuda.Windows 1.9.1 package, and
+       NVIDIA's cuBLAS 13.8.0.4 (fetched by scripts\Get-SpeechFiles.ps1), all
+       checked byte for byte and copied into a cuda folder beside the exe.
+       Without cuBLAS (Get-SpeechFiles -NoCuda) none of it is included and
+       the model runs on the processor. -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\Assets\Cuda\cublas64_13.dll')">
+    <_CudaSource Include="$(PkgWhisper_net_Runtime_Cuda_Windows)\build\win-x64\ggml-base-whisper.dll" ExpectedHash="4AEE9DDC683134AF3F142C6EB084B4CABBBB4A508A8A4A7E1C3EDB7FB4C2C015" />
+    <_CudaSource Include="$(PkgWhisper_net_Runtime_Cuda_Windows)\build\win-x64\ggml-cpu-whisper.dll" ExpectedHash="65B8B0524C8C5CFF3FABD6312C38A4B03A5FEC5CABCEDC4C1FB7E761639AA027" />
+    <_CudaSource Include="$(PkgWhisper_net_Runtime_Cuda_Windows)\build\win-x64\ggml-cuda-whisper.dll" ExpectedHash="ED197873D29FDDD308CB79276288DCF313B64C58894A1AC5DB6C3A01A2A87443" />
+    <_CudaSource Include="$(PkgWhisper_net_Runtime_Cuda_Windows)\build\win-x64\ggml-whisper.dll" ExpectedHash="C16BD1FE1D04AD708C407B11EE38F1EE44CAA7206E8FFDDD4B34FB2F4192781A" />
+    <_CudaSource Include="$(PkgWhisper_net_Runtime_Cuda_Windows)\build\win-x64\whisper.dll" ExpectedHash="EF73371BA9D1EF0AB94316907CD50B9CBEC5DD0829B89BA6F3DC19871C32F40A" />
+    <_CudaSource Include="Assets\Cuda\cublas64_13.dll" ExpectedHash="60BBBA8868290311E9C1657B2193DDEC667744EB555FF843F87ACB7C039F9EFA" />
+    <_CudaSource Include="Assets\Cuda\cublasLt64_13.dll" ExpectedHash="CAD63434448E7141629E240EA093AD596A7EF6A0F67B468BA9BC1DF6E1EEEE33" />
+    <Content Include="@(_CudaSource)" Link="cuda\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="VerifyCudaRuntime" BeforeTargets="CoreCompile" Condition="'@(_CudaSource)' != ''">
+    <GetFileHash Files="@(_CudaSource)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_CudaSourceHash" />
+    </GetFileHash>
+    <Error Condition="'%(_CudaSourceHash.FileHash)' != '%(_CudaSourceHash.ExpectedHash)'"
+           Text="CUDA runtime file differs from its pinned version: %(_CudaSourceHash.Identity). Run scripts\Get-SpeechFiles.ps1 again." />
   </Target>
 
   <!-- msquic.dll is .NET's QUIC (HTTP/3) networking engine. Nothing in Mini

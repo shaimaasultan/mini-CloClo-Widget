@@ -2,3 +2,8 @@ bin/
 obj/
 publish/
 *.user
+
+# Fetched by scripts\Get-SpeechFiles.ps1 (too big for git): the speech model
+# and NVIDIA's cuBLAS.
+Assets/Models/ggml-large-v3-turbo-q5_0.bin
+Assets/Cuda/
