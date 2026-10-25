@@ -3,8 +3,9 @@
   settings file it wrote ({ "language": "en" or "ar", "settings": { ... } })
   and the result file to write. It downloads one RSS (or Atom) news feed -
   the English or the Arabic one, by the voice commands' language - and
-  writes its newest headlines for Mini CloClo to read aloud:
-  { "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }.
+  writes its newest headlines - and each story's summary, read when the
+  person says its number - for Mini CloClo to read aloud:
+  { "title": "...", "items": [ { "text": "...", "details": "..." } ] }.
   A non-zero exit code means it failed.
 #>
 param(
@@ -35,18 +36,23 @@ function Clean([string]$text) {
     ($text -replace '\s+', ' ').Trim()
 }
 
+# Each story: its headline and its summary (RSS description, Atom summary).
 if ($xml.rss) {
     $title = Clean (Text $xml.rss.channel.title)
-    $titles = @($xml.rss.channel.item | ForEach-Object { Text $_.title })
+    $stories = @($xml.rss.channel.item | ForEach-Object { @{ Title = Text $_.title; Details = Text $_.description } })
 }
 elseif ($xml.feed) {
     $title = Clean (Text $xml.feed.title)
-    $titles = @($xml.feed.entry | ForEach-Object { Text $_.title })
+    $stories = @($xml.feed.entry | ForEach-Object { @{ Title = Text $_.title; Details = $(if ($_.summary) { Text $_.summary } else { Text $_.content }) } })
 }
 else { throw 'That address is not an RSS or Atom feed.' }
 
-$items = @($titles | ForEach-Object { Clean $_ } | Where-Object { $_ } | Select-Object -First $count |
-    ForEach-Object { [ordered]@{ text = $_; otherText = $_ } })
+$items = @($stories | ForEach-Object { @{ Title = Clean $_.Title; Details = Clean $_.Details } } | Where-Object { $_.Title } |
+    Select-Object -First $count | ForEach-Object {
+        $details = $_.Details
+        if ($details.Length -gt 900) { $details = $details.Substring(0, 900) + '...' }
+        [ordered]@{ text = $_.Title; otherText = $_.Title; details = $details; otherDetails = $details }
+    })
 if (-not $items.Count) { throw 'The feed had no headlines.' }
 
 $result = [ordered]@{ title = $title; otherTitle = $title; items = $items }

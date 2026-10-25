@@ -253,7 +253,9 @@ The tools that come with it:
   region" setting. Settings: country (e.g. `CA`; `none`: no holidays),
   province (e.g. `CA-ON`), the Islamic calendar method, and how many years.
 - **news** — the latest headlines, read aloud: *"Here it is. CBC Top
-  Stories. 5 items. 1: …"* ("again" repeats them, "stop" stops). Settings:
+  Stories. 5 items. 1: … Say a number to hear more."* Then say a headline's
+  number — "two" / "اتنين" — to hear that story's summary; another number
+  reads another (for 5 minutes). "Again" repeats, "stop" stops. Settings:
   the English feed (CBC Top Stories) and the Arabic feed (BBC Arabic), used by
   the voice commands' language, and how many headlines (1–10). Any RSS or
   Atom feed address (`https://…`) works.

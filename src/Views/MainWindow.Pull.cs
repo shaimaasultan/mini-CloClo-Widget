@@ -185,12 +185,48 @@ public partial class MainWindow
             return;
         }
         var title = reading.Title.Length > 0 ? reading.Title : Said(tool);
+        var hasDetails = reading.Items.Any(i => i.Details != null || i.OtherDetails != null);
         var english = $"Here it is. {title}. {reading.Items.Count} items. " +
-                      string.Join(" ", reading.Items.Select((item, i) => $"{i + 1}: {item.Text}"));
+                      string.Join(" ", reading.Items.Select((item, i) => $"{i + 1}: {item.Text}")) +
+                      (hasDetails ? " Say a number to hear more." : "");
         var arabic = $"اتفضل. {reading.OtherTitle ?? title}. {reading.Items.Count} عناصر. " +
-                     string.Join(" ", reading.Items.Select((item, i) => $"{i + 1}: {item.OtherText ?? item.Text}"));
-        // "Again" reads it once more; "stop" stops it.
+                     string.Join(" ", reading.Items.Select((item, i) => $"{i + 1}: {item.OtherText ?? item.Text}")) +
+                     (hasDetails ? " قول رقم عشان تسمع التفاصيل." : "");
+        // "Again" reads it once more; "stop" stops it; a number reads that
+        // item's details, for a few minutes.
+        _pulledReading = hasDetails ? (reading, DateTime.UtcNow + PulledReadingTime) : null;
         Answer(title, english, arabic, 30);
+    }
+
+    // The last "read" result, while its items can be picked by number.
+    private static readonly TimeSpan PulledReadingTime = TimeSpan.FromMinutes(5);
+    private (PullReading Reading, DateTime Until)? _pulledReading;
+
+    // "Two" / "اتنين" after the headlines: that item's details. True when
+    // taken; each number keeps the list open a while longer.
+    private bool TryReadPulledItem(string heard)
+    {
+        if (_pulledReading is not { } pulled) return false;
+        if (DateTime.UtcNow > pulled.Until)
+        {
+            _pulledReading = null;
+            return false;
+        }
+        if (QuranVoiceAnswers.NumberAlone(heard) is not { } number) return false;
+        Keeper.SetVoiceStatus("complete");
+        var items = pulled.Reading.Items;
+        if (number < 1 || number > items.Count)
+        {
+            Voice.Say($"Say a number from 1 to {items.Count}.", $"قول رقم من 1 لـ {items.Count}.");
+            return true;
+        }
+        _pulledReading = (pulled.Reading, DateTime.UtcNow + PulledReadingTime);
+        var item = items[number - 1];
+        var details = item.Details ?? item.OtherDetails;
+        var english = $"Number {number}. {item.Text}. " + (details ?? "There are no more details for this one.");
+        var arabic = $"رقم {number}. {item.OtherText ?? item.Text}. " + (item.OtherDetails ?? item.Details ?? "مفيش تفاصيل تانية للخبر ده.");
+        Answer($"{number}. {item.Text}", english, arabic, 30);
+        return true;
     }
 
     // The prayer-times city, for tools that need a country (public holidays).

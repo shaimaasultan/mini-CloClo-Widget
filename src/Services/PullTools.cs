@@ -38,12 +38,14 @@ internal sealed class PullTool
     public string Script => Path.Combine(Folder, "run.ps1");
 }
 
-// What a "read" tool writes: a title and up to ten short items.
-internal sealed record PullReading(string Title, string? OtherTitle, List<(string Text, string? OtherText)> Items);
+// What a "read" tool writes: a title and up to ten short items, each with
+// optional details read when the person says its number.
+internal sealed record PullReading(string Title, string? OtherTitle, List<PullItem> Items);
+internal sealed record PullItem(string Text, string? OtherText, string? Details, string? OtherDetails);
 
 internal static class PullTools
 {
-    public const int MaxItems = 10, MaxItemLength = 300;
+    public const int MaxItems = 10, MaxItemLength = 300, MaxDetailsLength = 1000;
 
     // Debug tests point this at a folder of test tools.
     internal static string? FolderOverride;
@@ -178,7 +180,8 @@ internal static class PullTools
         return File.Exists(resultFile) ? (Outcome.Done, resultFile) : (Outcome.NoResult, null);
     }
 
-    // A "read" result: { "title", "otherTitle", "items": [ { "text", "otherText" } ] }.
+    // A "read" result: { "title", "otherTitle", "items": [ { "text", "otherText",
+    // "details", "otherDetails" } ] }.
     internal static PullReading? ReadReading(string path)
     {
         if (new FileInfo(path).Length > 200_000) return null;
@@ -195,12 +198,13 @@ internal static class PullTools
                 }
             return null;
         }
-        var items = new List<(string, string?)>();
+        var items = new List<PullItem>();
         foreach (var property in root.EnumerateObject())
             if (string.Equals(property.Name, "items", StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.Array)
                 foreach (var item in property.Value.EnumerateArray().Take(MaxItems))
                     if (item.ValueKind == JsonValueKind.Object && Text(item, "text", MaxItemLength) is { } text)
-                        items.Add((text, Text(item, "otherText", MaxItemLength)));
+                        items.Add(new PullItem(text, Text(item, "otherText", MaxItemLength),
+                            Text(item, "details", MaxDetailsLength), Text(item, "otherDetails", MaxDetailsLength)));
         return items.Count == 0 ? null : new PullReading(Text(root, "title", 80) ?? "", Text(root, "otherTitle", 80), items);
     }
 }

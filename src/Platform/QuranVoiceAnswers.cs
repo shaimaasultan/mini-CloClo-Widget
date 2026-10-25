@@ -116,6 +116,10 @@ internal static class QuranVoiceAnswers
     // different words, so a sound-alike can't be read as the wrong number.
     internal static int? Number(string transcript) => Number(transcript, out _);
 
+    // A reply that is only a number ("two", "2", "number 2", "اتنين") - not
+    // a phrase with a number word in it ("one more time").
+    internal static int? NumberAlone(string transcript) => Number(transcript, out var clean) is { } n && clean ? n : null;
+
     // In Arabic voice mode a number may be said in Arabic or in English: the
     // phrase is read both ways (english is null otherwise). A reading that is
     // only a number wins over one with other words around it, and Arabic

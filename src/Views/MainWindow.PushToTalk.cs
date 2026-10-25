@@ -241,6 +241,8 @@ public partial class MainWindow
         }
         // An answer to "which surah?" / "from which ayah?" / "to which ayah?".
         if (await TryHandleQuranAnswerAsync(heard, english)) return;
+        // A number after the news headlines: that story's details.
+        if (TryReadPulledItem(heard)) return;
         // "Call Mom": read back, then dialed only after "yes".
         if (await TryHandleCallCommandAsync(heard)) return;
         if (ApprovedVoiceAppLauncher.IsShutdownCommand(heard))
