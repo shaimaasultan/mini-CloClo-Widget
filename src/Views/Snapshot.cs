@@ -147,6 +147,78 @@ internal static class Snapshot
         return topics.Select(t => t.ValidateAndNormalize()!).ToList();
     }
 
+    // "MiniCloClo.exe --reminder-test <report file>": a fake clock through a
+    // day (#39), ticking every 20 s like the app: four reminders and the
+    // hourly time, with a restart, the azan, a long prayer look and the PC
+    // asleep. Writes what is said and when, through the same schedule and
+    // the same combining as the announcement queue.
+    public static int ReminderTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        var day = new DateTime(2026, 10, 26);
+        CustomReminderSettings Reminder(string message, int every, int from, int to) =>
+            new CustomReminderSettings { Message = message, IntervalMinutes = every, StartHour = from, EndHour = to }.ValidateAndNormalize();
+        var reminders = new[]
+        {
+            Reminder("Drink a glass of water", 60, 9, 21),
+            Reminder("Take your medicine", 120, 8, 20),
+            Reminder("Stand up and stretch", 90, 9, 21),
+            Reminder("Night check", 30, 21, 6),
+        };
+        foreach (var r in reminders) lines.Add($"reminder: {r.Message}, every {r.IntervalMinutes} min, {r.StartHour}:00-{r.EndHour}:00");
+        var start = day.AddHours(8.5);
+        foreach (var r in reminders) ReminderSchedule.Start(r, start);
+        lines.Add($"started {start:HH:mm}: last fired " + string.Join(", ", reminders.Select(r => r.LastFired?.ToString("HH:mm") ?? "-")));
+
+        var queue = new System.Collections.Generic.List<Announcement>();
+        var lastChimeHour = start.Hour;
+        bool Held(DateTime t) =>
+            (t >= day.AddHours(13) && t < day.AddHours(13).AddMinutes(5)) ||   // the azan
+            (t >= day.AddHours(18) && t < day.AddHours(18).AddMinutes(20));    // a long prayer look
+        bool Asleep(DateTime t) => t >= day.AddHours(15).AddMinutes(5) && t < day.AddHours(16).AddMinutes(40);
+        for (var t = start; t <= day.AddDays(1).AddHours(2); t = t.AddSeconds(20))
+        {
+            if (Asleep(t)) continue;
+            if (t == day.AddHours(12).AddMinutes(10))
+            {
+                // A restart: the saved times are kept; Start changes nothing.
+                foreach (var r in reminders) ReminderSchedule.Start(r, t);
+                lines.Add($"{t:HH:mm:ss}  (restart: last fired kept: {string.Join(", ", reminders.Select(r => r.LastFired?.ToString("HH:mm")))})");
+            }
+            if (t.Minute == 0 && t.Hour != lastChimeHour)
+            {
+                lastChimeHour = t.Hour;
+                queue.Add(new Announcement(Announcement.Kinds.Hour, $"It's {SpokenTime.English(t)}", "", t));
+            }
+            else if (t.Minute != 0) lastChimeHour = -1;
+            foreach (var r in reminders)
+            {
+                var (due, say, slot) = ReminderSchedule.Check(r, t);
+                if (!due) continue;
+                r.LastFired = slot;
+                if (say) queue.Add(new Announcement(Announcement.Kinds.Reminder, r.Message, "", t));
+                else lines.Add($"{t:HH:mm:ss}  (missed while asleep, not said: {r.Message} of {slot:HH:mm})");
+            }
+            var expired = queue.Where(a => t - a.Created > a.Expiry).ToList();
+            foreach (var a in expired) lines.Add($"{t:HH:mm:ss}  (dropped, waited too long: {a.English})");
+            queue.RemoveAll(a => expired.Contains(a));
+            if (queue.Count == 0 || Held(t)) continue;
+            var (english, _) = Announcement.Combine(queue);
+            lines.Add($"{t:HH:mm:ss}  {english}{(queue.Any(a => a.Created < t) ? $"   [waited since {queue.Min(a => a.Created):HH:mm:ss}]" : "")}");
+            queue.Clear();
+        }
+        lines.Add("-- long readings, sentence by sentence (paused and continued per sentence) --");
+        foreach (var text in new[]
+                 {
+                     "Here it is. CBC | Top Stories News. 3 items. 1: Canada wins gold in curling. 2: Ontario weather warning for Tuesday. 3: New transit line opens in Mississauga. Say a number to hear more.",
+                     "اتفضل. BBC Arabic. 3 عناصر. 1: خبر أول عن الاقتصاد. 2: خبر تاني عن الرياضة؟ 3: خبر تالت عن الطقس. قول رقم عشان تسمع التفاصيل.",
+                     "It's 3:00 PM.",
+                 })
+            lines.Add($"{Voice.Sentences(text).Length} parts: " + string.Join(" | ", Voice.Sentences(text)));
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --engine-check <report file>": which speech runtime
     // loads (graphics card or processor) and how long loading the model and
     // one recognition of a second of silence take (#36).

@@ -255,6 +255,9 @@ public sealed class CustomReminderSettings
     public bool PlayAudio { get; set; }
     public string? AudioPath { get; set; }
     public bool Enabled { get; set; } = true;
+    // The last scheduled time it fired (local time), kept so a restart or
+    // reinstall doesn't start its count again (#39). Null: not started.
+    public DateTime? LastFired { get; set; }
 
     public CustomReminderSettings ValidateAndNormalize()
     {
@@ -264,6 +267,8 @@ public sealed class CustomReminderSettings
             Message = Message.Trim();
 
         if (!IntervalChoices.Contains(IntervalMinutes)) IntervalMinutes = 60;
+        // A time in the future (a changed clock) would hold it back: start over.
+        if (LastFired is { } last && last > DateTime.Now.AddMinutes(1)) LastFired = null;
         if (StartHour is < 0 or > 23) StartHour = 9;
         if (EndHour is < 0 or > 23 || EndHour == StartHour) EndHour = StartHour == 21 ? 9 : 21;
         if (!LocalAudioPlayer.IsAllowedLocalAudioFile(AudioPath))
@@ -284,6 +289,7 @@ public sealed class CustomReminderSettings
         PlayAudio = PlayAudio,
         AudioPath = AudioPath,
         Enabled = Enabled,
+        LastFired = LastFired,
     };
 
     public static string IntervalLabel(int minutes) =>

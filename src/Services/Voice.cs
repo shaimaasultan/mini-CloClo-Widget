@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MiniCloClo;
@@ -32,13 +33,98 @@ public static class Voice
     {
         if (Muted) return;
         var text = Pick(english, arabic);
-        SpeechReader.Speak(text, onStarted, selectedVoice: PreferredVoice(text));
+        Start(Sentences(text), onStarted);
+    }
+
+    // ---- Pausing for a reminder (#39) ----
+    // What Say is reading: the text in sentences, and the one being spoken.
+    // A long text (the news) is read one sentence at a time, so a reminder
+    // can pause it and it carries on from the sentence that was cut.
+    private sealed class Reading(string[] sentences)
+    {
+        public readonly string[] Sentences = sentences;
+        public int Index;
+    }
+
+    private static readonly object ReadingLock = new();
+    private static Reading? _reading;
+    private const int SentenceSplitLength = 160;
+
+    static Voice()
+    {
+        SpeechReader.Finished += OnSentenceFinished;
+        // Stopped on purpose (the azan starting, "stop", a new command): the
+        // rest isn't read.
+        SpeechReader.Stopping += Forget;
+    }
+
+    internal static string[] Sentences(string text)
+    {
+        if (text.Length <= SentenceSplitLength) return [text];
+        // After . ! ? ؟ followed by a space: "1: ... 2: ..." news items end
+        // with their own full stop.
+        var parts = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?؟])\s+")
+            .Where(p => p.Trim().Length > 0).ToArray();
+        return parts.Length == 0 ? [text] : parts;
+    }
+
+    private static void Start(string[] sentences, Action? onStarted = null)
+    {
+        var reading = new Reading(sentences);
+        lock (ReadingLock) _reading = reading;
+        SpeechReader.Speak(sentences[0], onStarted, selectedVoice: PreferredVoice(sentences[0]));
+    }
+
+    // The next sentence, when the one being spoken has finished - unless the
+    // reading was replaced, paused or stopped meanwhile.
+    private static void OnSentenceFinished()
+    {
+        string? next;
+        lock (ReadingLock)
+        {
+            if (_reading is not { } reading) return;
+            if (++reading.Index >= reading.Sentences.Length)
+            {
+                _reading = null;
+                return;
+            }
+            next = reading.Sentences[reading.Index];
+        }
+        SpeechReader.Speak(next, selectedVoice: PreferredVoice(next));
+    }
+
+    // Stops what Say is reading and returns what is left (from the sentence
+    // being spoken), to be carried on with Resume; null when nothing is.
+    public static string[]? Pause()
+    {
+        string[]? rest = null;
+        lock (ReadingLock)
+        {
+            if (_reading is { } reading && SpeechReader.IsSpeaking && reading.Index < reading.Sentences.Length)
+                rest = reading.Sentences[reading.Index..];
+            _reading = null;
+        }
+        SpeechReader.Stop();
+        return rest;
+    }
+
+    public static void Resume(string[] rest)
+    {
+        if (Muted || rest.Length == 0) return;
+        Start(rest);
+    }
+
+    // "Stop": nothing carries on afterwards.
+    public static void Forget()
+    {
+        lock (ReadingLock) _reading = null;
     }
 
     // Says it and waits until it has been said (at most `limit`).
     public static async Task SayAndWaitAsync(string english, string? arabic = null, TimeSpan? limit = null)
     {
         if (Muted) return;
+        lock (ReadingLock) _reading = null;
         var text = Pick(english, arabic);
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         void OnFinished() => finished.TrySetResult();

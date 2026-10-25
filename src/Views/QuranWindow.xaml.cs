@@ -217,6 +217,29 @@ public partial class QuranWindow : Window
     // Stops the loop (for the azan, or when another sound needs the speakers).
     public void StopRecitation() => SetReciting(false);
 
+    // For a reminder (#39): stops the recitation and returns which ayah of
+    // the range it was on (null when it wasn't reciting) ...
+    public int? PauseRecitation()
+    {
+        if (!_reciting) return null;
+        var at = _playIndex;
+        SetReciting(false);
+        return at;
+    }
+
+    // ... and carries on from that ayah afterwards.
+    public void ResumeRecitation(int at)
+    {
+        if (_reciting || MissingAudio() != null) return;
+        _reciting = true;
+        _playIndex = Math.Clamp(at, 0, Math.Max(0, Length - 1));
+        _gapTimer.Stop();
+        PlayCurrent();
+        Highlight();
+        RecitingChanged?.Invoke(true);
+        if (IsLoaded) UpdateState();
+    }
+
     private void ShowRange(int surah, int start, int end)
     {
         _wholeSurah = false;

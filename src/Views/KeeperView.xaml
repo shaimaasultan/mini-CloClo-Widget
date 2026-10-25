@@ -139,6 +139,34 @@
             </Canvas>
         </Canvas>
 
+        <!-- ===== Reminder time (#39): a golden bell at the top left, swinging
+             and ringing while a reminder is on (top right is the sun/moon). -->
+        <Canvas x:Name="ReminderBell" Canvas.Left="4" Canvas.Top="22" Width="34" Height="38" Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <!-- Sound waves on both sides. -->
+            <Canvas x:Name="BellWaves">
+                <Path Data="M4 10 Q0 17 4 24" Stroke="#f2b632" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Path Data="M0 6 Q-6 17 0 28" Stroke="#f2b632" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.7" />
+                <Path Data="M30 10 Q34 17 30 24" Stroke="#f2b632" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Path Data="M34 6 Q40 17 34 28" Stroke="#f2b632" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.7" />
+            </Canvas>
+            <Canvas x:Name="BellBody" Width="34" Height="38">
+                <Canvas.RenderTransform>
+                    <RotateTransform x:Name="BellSwing" CenterX="17" CenterY="3" />
+                </Canvas.RenderTransform>
+                <!-- A soft glow so it shows on any wallpaper. -->
+                <Ellipse Canvas.Left="4" Canvas.Top="4" Width="26" Height="26" Fill="#ffd966" Opacity="0.45">
+                    <Ellipse.Effect><BlurEffect Radius="9" /></Ellipse.Effect>
+                </Ellipse>
+                <Ellipse Canvas.Left="14.5" Canvas.Top="0" Width="5" Height="5" Fill="#c8901a" />
+                <Path Data="M17 4 Q9 4 8.5 14 Q8 22 5 26 L29 26 Q26 22 25.5 14 Q25 4 17 4 Z"
+                      Fill="#f2b632" Stroke="#a8740f" StrokeThickness="1" />
+                <Path Data="M12 9 Q11 14 11 20" Stroke="#fff3c4" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.85" />
+                <Rectangle Canvas.Left="4" Canvas.Top="25" Width="26" Height="3" RadiusX="1.5" RadiusY="1.5" Fill="#c8901a" />
+                <Ellipse x:Name="BellClapper" Canvas.Left="14" Canvas.Top="27" Width="6" Height="6" Fill="#a8740f" />
+            </Canvas>
+        </Canvas>
+
         <!-- ===== Keeper ===== -->
         <Canvas x:Name="KeeperWrap" Canvas.Left="21" Canvas.Top="24" Width="108" Height="149" RenderTransformOrigin="0.5,1">
             <Canvas.RenderTransform>

@@ -287,6 +287,33 @@ public partial class KeeperView : System.Windows.Controls.UserControl
         WorkoutCountdown.Visibility = Show(!active && _activityState == "awake" && !string.IsNullOrEmpty(_shirtName));
         ApplyArms();
         ApplyOutfit();
+        ShowReminderBell(active);
+    }
+
+    // Reminder time (#39): the bell above Keeper swings while a reminder is
+    // on - quickly with full motion, gently by default, and stays still
+    // (only shown) when motion is off.
+    private void ShowReminderBell(bool active)
+    {
+        ReminderBell.Visibility = Show(active);
+        BellSwing.BeginAnimation(RotateTransform.AngleProperty, null);
+        BellWaves.BeginAnimation(OpacityProperty, null);
+        BellSwing.Angle = 0;
+        BellWaves.Opacity = 1;
+        if (!active || _motionMode == "still") return;
+        var full = _motionMode == "full";
+        BellSwing.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(-(full ? 18 : 10), full ? 18 : 10,
+            TimeSpan.FromMilliseconds(full ? 320 : 650))
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+        });
+        BellWaves.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.2, TimeSpan.FromMilliseconds(full ? 320 : 650))
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+        });
     }
 
     // An open mushaf in both hands while a recitation plays.

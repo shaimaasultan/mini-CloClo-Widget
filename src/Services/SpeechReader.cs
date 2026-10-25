@@ -99,8 +99,13 @@ public static class SpeechReader
         _ = SpeakAsync(text, onStarted, onFailed, selectedVoice, version);
     }
 
+    // Raised when reading is stopped on purpose (not when it finishes), so
+    // a reading of several sentences doesn't go on to the next one.
+    public static event Action? Stopping;
+
     public static void Stop()
     {
+        Stopping?.Invoke();
         Interlocked.Increment(ref _requestVersion);
         bool playing;
         lock (PlaybackLock) playing = _player != null;

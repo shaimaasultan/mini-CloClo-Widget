@@ -14,6 +14,10 @@ public static class Earcon
 
     public static Task ListeningAsync() => PlayAsync((660, 0.07), (990, 0.09));
 
+    // Before a reminder (#39): a gentle falling two-note bell, longer and
+    // lower than the listening chime so the two aren't confused.
+    public static Task ReminderAsync() => PlayAsync((988, 0.16), (740, 0.24));
+
     // Each note is a sine with a short fade in and out (no clicks), played
     // one after another. Completes when playback ends, at most a second.
     private static async Task PlayAsync(params (double Frequency, double Seconds)[] notes)

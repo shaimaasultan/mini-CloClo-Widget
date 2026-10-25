@@ -320,6 +320,17 @@ writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
   Open them with the ⏰ icon, Ctrl+Alt+R or by saying "reminders"; **Add**
   makes a new one and **Say it now** tries it out.
 
+  They come **on the clock**: at the start hour and every interval after it
+  (every hour from 9 → 9:00, 10:00…; every 90 minutes → 9:00, 10:30,
+  12:00…), also across midnight. A restart or reinstall doesn't reset them;
+  one missed while the PC was asleep is said once if it was due in the last
+  15 minutes. **Nothing is cut off:** reminders, the hourly time and the
+  Quran review wait their turn and what is due together is said as one —
+  *"It's 3:00 PM. Reminders: drink a glass of water. Take your medicine."* —
+  and they wait, instead of being lost, while the azan plays, a recitation is
+  on, Keeper is speaking or you're answering a question (a reminder waits up
+  to an hour, the hourly time 5 minutes).
+
   | Your reminders | Adding a reminder |
   |---|---|
   | <img src="docs/screenshots/reminders.png" alt="Custom reminders window listing Drink a glass of water every hour 9 to 21, Take your medicine every 4 hours 8 to 20, and Stand up and stretch every 2 hours (off), with Add, Edit, Say it now, Turn off and Remove buttons" width="400"> | <img src="docs/screenshots/reminder-editor.png" alt="New reminder form: message Take your medicine, repeat every 4 hours, active from 8:00 AM until 8:00 PM, reminder on, say the message out loud, and buttons to choose and preview a sound" width="340"> |

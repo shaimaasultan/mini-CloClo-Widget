@@ -32,11 +32,9 @@ public partial class MainWindow : Window
     private DispatcherTimer? _reminderLookTimer;
     private LocalAudioPlayer? _azanPlayer;
     private LocalAudioPlayer? _reminderAudioPlayer;
-    private string? _reminderSpeechAfterAudio;
     private DateTimeOffset _lastPrayerCheckUtc;
     private readonly HashSet<long> _playedPrayerInstants = new();
     private readonly HashSet<long> _alertedPrayerInstants = new();
-    private readonly Dictionary<CustomReminderSettings, DateTime> _customReminderLastChecked = new();
     private int _lastChimeHour = -1;
     // "awake", "asleep" or "prayer" — see UpdateActivityState.
     private string _activityState = "awake";
@@ -105,12 +103,8 @@ public partial class MainWindow : Window
                 timer?.Stop();
             _azanPlayer?.Dispose();
             _azanPlayer = null;
-            if (_reminderAudioPlayer != null)
-            {
-                _reminderAudioPlayer.Finished -= ReminderAudioFinished;
-                _reminderAudioPlayer.Dispose();
-                _reminderAudioPlayer = null;
-            }
+            _reminderAudioPlayer?.Dispose();
+            _reminderAudioPlayer = null;
             SpeechReader.Stop();
         };
         MouseLeftButtonDown += Widget_MouseLeftButtonDown;
@@ -149,7 +143,9 @@ public partial class MainWindow : Window
         _idleTimer.Start();
 
         var now = DateTime.Now;
-        foreach (var reminder in _settings.CustomReminders) _customReminderLastChecked[reminder] = now;
+        // Reminders already started keep their saved times (#39); new ones
+        // start from their current slot.
+        foreach (var reminder in _settings.CustomReminders) ReminderSchedule.Start(reminder, now);
         _lastChimeHour = now.Hour;
         _minuteTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
         _minuteTimer.Tick += (_, _) => MinuteTick();
@@ -272,9 +268,11 @@ public partial class MainWindow : Window
     {
         var any = _azanPlayer?.IsPlaying == true || _reminderAudioPlayer?.IsPlaying == true ||
                   _quranWindow?.IsReciting == true || SpeechReader.IsSpeaking;
+        // "Stop" during a reminder: what it paused doesn't carry on (#39).
+        if (_announcing) _announcementStopped = true;
+        Voice.Forget();
         _azanPlayer?.Stop();
         _reminderAudioPlayer?.Stop();
-        _reminderSpeechAfterAudio = null;
         _quranWindow?.StopRecitation();
         SpeechReader.Stop();
         ResumeVoiceAfterAudio();
@@ -393,7 +391,6 @@ public partial class MainWindow : Window
         if (azan != null)
         {
             _reminderAudioPlayer?.Stop();
-            _reminderSpeechAfterAudio = null;
             _quranWindow?.StopRecitation();
             SpeechReader.Stop();
             if (_azanPlayer == null)
@@ -449,70 +446,37 @@ public partial class MainWindow : Window
 
     // ---- Custom reminders, the hourly time and the Quran reminder ----
 
+    // Every 20 seconds: what is due goes into the announcement queue
+    // (MainWindow.Announcements.cs), which says it in turn - nothing is cut
+    // off or dropped. Reminders keep coming while the avatar is asleep (no
+    // keyboard or mouse use doesn't mean nobody is listening); during the
+    // prayer look the queue holds them.
     private void MinuteTick()
     {
         var now = DateTime.Now;
         if (_settings.AnnounceHourly && now.Minute == 0 && now.Hour != _lastChimeHour)
         {
             _lastChimeHour = now.Hour;
-            if (_azanPlayer?.IsPlaying != true && _quranWindow?.IsReciting != true)
-                Voice.Say($"It's {SpokenTime.English(now)}.", $"الساعة {SpokenTime.Arabic(now)}.");
+            Announce(new Announcement(Announcement.Kinds.Hour, $"It's {SpokenTime.English(now)}", $"الساعة {SpokenTime.Arabic(now)}", now));
         }
         else if (now.Minute != 0) _lastChimeHour = -1;
 
+        // On the clock, each reminder at its start hour plus whole intervals,
+        // its last time saved (#39).
+        var changed = false;
         foreach (var reminder in _settings.CustomReminders)
         {
-            if (!_customReminderLastChecked.TryGetValue(reminder, out var lastChecked))
-                lastChecked = _customReminderLastChecked[reminder] = now;
-            // Reminders keep coming while the avatar is asleep: no keyboard or
-            // mouse use doesn't mean nobody is listening. They wait only while
-            // the prayer look is on, and outside their hours.
-            if (!reminder.Enabled || _activityState == "prayer" || !IsWithinReminderHours(reminder, now))
-            {
-                _customReminderLastChecked[reminder] = now;
-                continue;
-            }
-            if (now - lastChecked < TimeSpan.FromMinutes(reminder.IntervalMinutes)) continue;
-            // One at a time, so two schedules don't talk over each other.
-            _customReminderLastChecked[reminder] = now;
-            ShowCustomReminder(reminder);
-            return;
+            var (due, say, slot) = ReminderSchedule.Check(reminder, now);
+            if (!due) continue;
+            reminder.LastFired = slot;
+            changed = true;
+            if (!say) continue; // missed while the PC was asleep or off
+            Announce(new Announcement(Announcement.Kinds.Reminder,
+                reminder.Speak ? reminder.Message : "", reminder.Speak ? reminder.Message : "", now,
+                reminder.PlayAudio ? reminder.AudioPath : null));
         }
+        if (changed) _settings.Save();
         QuranReminderTick(now);
-    }
-
-    private static bool IsWithinReminderHours(CustomReminderSettings reminder, DateTime now) =>
-        reminder.StartHour < reminder.EndHour
-            ? now.Hour >= reminder.StartHour && now.Hour < reminder.EndHour
-            : now.Hour >= reminder.StartHour || now.Hour < reminder.EndHour;
-
-    private void ShowCustomReminder(CustomReminderSettings reminder)
-    {
-        ShowLabel(reminder.Message, "Reminder", "⏰", seconds: 30);
-        Keeper.SetCustomReminderActive(true);
-        _reminderLookTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-        _reminderLookTimer.Stop();
-        _reminderLookTimer.Tick -= ReminderLookTimer_Tick;
-        _reminderLookTimer.Tick += ReminderLookTimer_Tick;
-        _reminderLookTimer.Start();
-
-        _reminderAudioPlayer?.Stop();
-        _reminderSpeechAfterAudio = null;
-        // The azan takes priority if the two coincide.
-        if (_azanPlayer?.IsPlaying == true) return;
-        if (reminder.PlayAudio)
-        {
-            if (_reminderAudioPlayer == null)
-            {
-                _reminderAudioPlayer = new LocalAudioPlayer();
-                _reminderAudioPlayer.Finished += ReminderAudioFinished;
-            }
-            _reminderSpeechAfterAudio = reminder.Speak ? reminder.Message : null;
-            _quranWindow?.StopRecitation();
-            if (_reminderAudioPlayer.TryPlay(reminder.AudioPath)) return;
-            _reminderSpeechAfterAudio = null;
-        }
-        if (reminder.Speak) Voice.Say("Reminder: " + reminder.Message, "تذكير: " + reminder.Message);
     }
 
     private void ReminderLookTimer_Tick(object? sender, EventArgs e) => HideReminderLook();
@@ -523,13 +487,6 @@ public partial class MainWindow : Window
         Keeper.SetCustomReminderActive(false);
     }
 
-    private void ReminderAudioFinished()
-    {
-        var message = _reminderSpeechAfterAudio;
-        _reminderSpeechAfterAudio = null;
-        if (message != null && !_closing && _azanPlayer?.IsPlaying != true)
-            Voice.Say("Reminder: " + message, "تذكير: " + message);
-    }
 
     // The ayah being memorized, every so often if chosen in the Quran window
     // - asleep too, like the custom reminders, but not during the prayer look.
@@ -542,11 +499,18 @@ public partial class MainWindow : Window
         _lastQuranReminder = now;
         var (surah, ayah) = (_quranStore.Surah, _quranStore.Ayah);
         var info = QuranText.GetSurah(surah);
+        // Said in turn by the announcement queue - not over a recitation.
+        Announce(new Announcement(Announcement.Kinds.Quran, $"Time to review your Quran: {info.Name}, ayah {ayah}",
+            $"وقت مراجعة الحفظ: سورة {info.ArabicName}، الآية {ayah}", now));
+    }
+
+    private void ShowQuranReminderLabel()
+    {
+        _quranStore ??= QuranStore.Load();
+        var (surah, ayah) = (_quranStore.Surah, _quranStore.Ayah);
+        var info = QuranText.GetSurah(surah);
         var text = QuranText.GetAyah(surah, ayah).Text;
         ShowLabel($"Quran · {info.Name} {surah}:{ayah}", text.Length > 70 ? text[..70] + "…" : text, "📗", seconds: 30);
-        if (_quranWindow?.IsReciting != true && _azanPlayer?.IsPlaying != true)
-            Voice.Say($"Time to review your Quran: {info.Name}, ayah {ayah}.",
-                $"وقت مراجعة الحفظ: سورة {info.ArabicName}، الآية {ayah}.");
     }
 
     // ---- The Quran window ----
@@ -649,12 +613,11 @@ public partial class MainWindow : Window
             return;
         }
         _reminderAudioPlayer?.Stop();
-        _reminderSpeechAfterAudio = null;
         _settings.CustomReminders = dialog.Reminders.ToList();
-        _settings.Save();
+        // Kept reminders keep their times; new or edited ones start from now (#39).
         var now = DateTime.Now;
-        _customReminderLastChecked.Clear();
-        foreach (var reminder in _settings.CustomReminders) _customReminderLastChecked[reminder] = now;
+        foreach (var reminder in _settings.CustomReminders) ReminderSchedule.Start(reminder, now);
+        _settings.Save();
         var count = _settings.CustomReminders.Count(r => r.Enabled);
         Voice.Say(count == 1 ? "Reminders saved. 1 reminder is on." : $"Reminders saved. {count} reminders are on.",
             $"اتحفظت التذكيرات. شغال منها {count}.");
