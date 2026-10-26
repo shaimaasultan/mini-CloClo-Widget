@@ -68,6 +68,12 @@ internal static class MediaSearch
             if (app == SearchApp.YouTube) return StartEdge(YouTubeAddress(words), newWindow: true);
             if (SpotifyFromStore())
             {
+                // Started cold by a search address, Store Spotify reaches into
+                // the Music folder and Windows Security's controlled folder
+                // access shows a "blocked" warning; started as an app it
+                // doesn't. So it's started first, then sent the search.
+                if (Process.GetProcessesByName("Spotify").Length == 0 && !await StartStoreSpotifyAsync())
+                    return "Spotify didn't open.";
                 // Only the Spotify package may answer: a protocol handler
                 // another program registered can't take the address.
                 var options = new Windows.System.LauncherOptions { TargetApplicationPackageFamilyName = SpotifyPackageFamily };
@@ -84,6 +90,30 @@ internal static class MediaSearch
         {
             return $"{SearchVoiceCommand.Name(app)} didn't open ({ex.GetType().Name}).";
         }
+    }
+
+    // Starts the Spotify package as an app (its Start-menu entry) and waits,
+    // up to 20 seconds, for its window.
+    private static async Task<bool> StartStoreSpotifyAsync()
+    {
+        var package = new Windows.Management.Deployment.PackageManager().FindPackagesForUser(string.Empty, SpotifyPackageFamily).FirstOrDefault();
+        if (package == null) return false;
+        var entry = (await package.GetAppListEntriesAsync()).FirstOrDefault();
+        if (entry == null || !await entry.LaunchAsync()) return false;
+        Trace?.Invoke("started Spotify as an app");
+        var until = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        while (DateTime.UtcNow < until)
+        {
+            await Task.Delay(500);
+            if (Process.GetProcessesByName("Spotify").Any(p => p.MainWindowHandle != IntPtr.Zero))
+            {
+                // Its window shows before it can take an address.
+                await Task.Delay(1500);
+                Trace?.Invoke("Spotify's window is up");
+                return true;
+            }
+        }
+        return false;
     }
 
     private static string? StartEdge(string address, bool newWindow)
