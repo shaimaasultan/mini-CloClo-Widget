@@ -55,6 +55,9 @@ public class WidgetSettings
     public bool PushToTalkEnabled { get; set; } = true;
     // Ctrl+Alt shortcuts that work from any app (see MainWindow.Hotkeys.cs).
     public bool KeyboardShortcutsEnabled { get; set; } = true;
+    // The shortcuts turned off one by one (their letters), e.g. one another
+    // app needs; the rest keep working.
+    public List<string> ShortcutsOff { get; set; } = new();
     // Steers voice-command recognition toward Arabic speech, and answers in
     // Arabic when an Arabic voice is installed.
     public bool VoiceCommandsInArabic { get; set; }
@@ -190,6 +193,10 @@ public class WidgetSettings
                 .Take(20)
                 .ToDictionary(s => s.Key, s => s.Value));
         SearchResultCount = SearchResultChoices.Contains(SearchResultCount) ? SearchResultCount : 5;
+        ShortcutsOff = (ShortcutsOff ?? new())
+            .Where(key => key is { Length: 1 } && key[0] is >= 'A' and <= 'Z')
+            .Distinct()
+            .ToList();
         CustomReminders = (CustomReminders ?? new List<CustomReminderSettings>())
             .Take(MaxCustomReminders)
             .Select(reminder => reminder?.ValidateAndNormalize())

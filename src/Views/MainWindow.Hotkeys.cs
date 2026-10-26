@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
@@ -12,7 +13,8 @@ namespace MiniCloClo;
 // Registered with Windows'
 // RegisterHotKey, which only reports these exact key combinations - no
 // other keystroke is seen. A combination another app already uses is
-// skipped, and the help says which ones work.
+// skipped, and the help says which ones work. Each one can be turned off on
+// its own in the menu (Voice and speech, Keyboard shortcuts), or all of them.
 public partial class MainWindow
 {
     private const int WM_HOTKEY = 0x0312;
@@ -21,22 +23,47 @@ public partial class MainWindow
     private bool _hotkeysRegistered;
     private readonly List<int> _registeredHotkeys = [];
 
-    private (char Key, Action Run)[] Hotkeys =>
+    // Each shortcut, with what the menu and the spoken help call it.
+    private (char Key, string English, string Arabic, Action Run)[] Hotkeys =>
     [
-        ('T', SayTime),
-        ('D', SayDate),
-        ('P', SayNextPrayer),
-        ('A', SayPrayerTimes),
-        ('Q', OpenQuran),
-        ('R', OpenCustomReminders),
-        ('K', OpenContacts),
-        ('I', OpenTopics),
-        ('Y', MedicineTaken),
-        ('V', ToggleKeyboardVoiceCommand),
-        ('S', () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
-        ('M', OpenMenu),
-        ('H', SayHelp),
+        ('T', "the time", "الساعة", SayTime),
+        ('D', "the date", "التاريخ", SayDate),
+        ('P', "the next prayer", "الصلاة الجاية", SayNextPrayer),
+        ('A', "all prayer times", "كل المواقيت", SayPrayerTimes),
+        ('Q', "the Quran", "القرآن", OpenQuran),
+        ('R', "reminders", "التذكيرات", OpenCustomReminders),
+        ('K', "contacts and calls", "جهات الاتصال", OpenContacts),
+        ('I', "questions and answers", "الأسئلة والأجوبة", OpenTopics),
+        ('Y', "medicine taken", "خدت الدوا", MedicineTaken),
+        ('V', "talk", "الكلام", ToggleKeyboardVoiceCommand),
+        ('S', "stop sounds", "إيقاف الصوت", () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
+        ('M', "the menu", "القائمة", OpenMenu),
+        ('H', "help", "المساعدة", SayHelp),
     ];
+
+    private bool ShortcutOn(char key) => !_settings.ShortcutsOff.Contains(key.ToString());
+
+    // The shortcuts working now, as the help says them: "T the time, D the date".
+    private (string English, string Arabic) WorkingShortcuts()
+    {
+        var keys = Hotkeys;
+        var working = _registeredHotkeys.Order().Select(id => keys[id - 1]).ToList();
+        return (string.Join(", ", working.Select(k => $"{k.Key} {k.English}")),
+                string.Join("، ", working.Select(k => $"{k.Key} {k.Arabic}")));
+    }
+
+    // One shortcut on or off, from the menu.
+    private void ToggleShortcut(char key)
+    {
+        var letter = key.ToString();
+        var on = !ShortcutOn(key);
+        if (on) _settings.ShortcutsOff.Remove(letter);
+        else _settings.ShortcutsOff.Add(letter);
+        _settings.Save();
+        UpdateHotkeys();
+        var (_, english, arabic, _) = Hotkeys.First(k => k.Key == key);
+        Voice.Say($"Control Alt {key}, {english}, {(on ? "on" : "off")}.", $"كنترول ألت {key}، {arabic}، {(on ? "شغال" : "مقفول")}.");
+    }
 
     private void UpdateHotkeys()
     {
@@ -49,6 +76,7 @@ public partial class MainWindow
         var failed = new List<char>();
         for (var id = 0; id < keys.Length; id++)
         {
+            if (!ShortcutOn(keys[id].Key)) continue;
             if (RegisterHotKey(hwnd, id + 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, keys[id].Key)) _registeredHotkeys.Add(id + 1);
             else failed.Add(keys[id].Key);
         }

@@ -176,7 +176,10 @@ noisy microphone from a misheard word.
 | **H** | Help |
 
 If another app already uses one of these, Mini CloClo says so and the rest
-still work. They can be turned off under *Voice and speech*.
+still work. **Each one can be turned on or off on its own**: menu → *Voice and
+speech* → *Keyboard shortcuts (Ctrl+Alt)* lists them all, with *All
+shortcuts* at the top to turn every one off or on at once. One turned off is
+left free for other apps, and the spoken help names only those that work.
 
 **On the widget**, once it has focus (click it, or open its menu): the same
 letters without Ctrl+Alt, plus **Space** to talk, **Shift+P** for all prayer

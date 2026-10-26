@@ -244,13 +244,10 @@ public partial class MainWindow : Window
 
     internal void SayHelp()
     {
-        var keys = _hotkeysRegistered
-            ? " Keyboard shortcuts, from any app, with Control and Alt: T the time, D the date, P the next prayer, A all prayer times, " +
-              "Q the Quran, R reminders, K contacts and calls, I questions and answers, Y medicine taken, V talk, S stop sounds, M the menu, and H this help."
-            : "";
-        var keysArabic = _hotkeysRegistered
-            ? " اختصارات لوحة المفاتيح مع كنترول وألت: T الساعة، D التاريخ، P الصلاة الجاية، A كل المواقيت، Q القرآن، R التذكيرات، K جهات الاتصال، I الأسئلة والأجوبة، Y خدت الدوا، V الكلام، S إيقاف الصوت، M القائمة، H المساعدة."
-            : "";
+        // Only the shortcuts that work now: not those turned off or taken.
+        var (working, workingArabic) = WorkingShortcuts();
+        var keys = _hotkeysRegistered ? $" Keyboard shortcuts, from any app, with Control and Alt: {working}." : "";
+        var keysArabic = _hotkeysRegistered ? $" اختصارات لوحة المفاتيح مع كنترول وألت: {workingArabic}." : "";
         var talk = _settings.PushToTalkEnabled ? "Hold the right mouse button anywhere for a second" : "Press Control Alt V";
         var talkArabic = _settings.PushToTalkEnabled ? "دوس كليك يمين مطول في أي مكان" : "دوس كنترول ألت V";
         ShowLabel("Help", "Say: time, date, next prayer, Quran, reminders, stop", "❔");
@@ -816,7 +813,12 @@ public partial class MainWindow : Window
         {
             Item("_Hold right-click to talk", TogglePushToTalk, isChecked: _settings.PushToTalkEnabled),
             Item("Voice commands and replies in _Arabic", ToggleVoiceCommandsInArabic, isChecked: _settings.VoiceCommandsInArabic),
-            Item("_Keyboard shortcuts (Ctrl+Alt)", ToggleKeyboardShortcuts, isChecked: _settings.KeyboardShortcutsEnabled),
+            SubMenu("_Keyboard shortcuts (Ctrl+Alt)", null, new object[]
+            {
+                Item("_All shortcuts", ToggleKeyboardShortcuts, isChecked: _settings.KeyboardShortcutsEnabled),
+                new Separator(),
+            }.Concat(Hotkeys.Select(k => (object)Item($"Ctrl+Alt+_{k.Key} — {k.English}", () => ToggleShortcut(k.Key),
+                isChecked: ShortcutOn(k.Key), enabled: _settings.KeyboardShortcutsEnabled)))),
             Item("Say the time every _hour", ToggleAnnounceHourly, isChecked: _settings.AnnounceHourly),
             Item("_Greeting at startup", ToggleSpeakGreeting, isChecked: _settings.SpeakGreeting),
             SubMenu("Speaking _speed", null, WidgetSettings.SpeechRateChoices.Select(rate => (object)Item(
