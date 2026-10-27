@@ -61,9 +61,10 @@ public static class Voice
     internal static string[] Sentences(string text)
     {
         if (text.Length <= SentenceSplitLength) return [text];
-        // After . ! ? ؟ followed by a space: "1: ... 2: ..." news items end
-        // with their own full stop.
-        var parts = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?؟])\s+")
+        // After . ! ? ؟ followed by a space ("1: ... 2: ..." news items end
+        // with their own full stop), and at line breaks - text recognized in
+        // a picture often has lines without full stops.
+        var parts = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?؟])\s+|\s*\n\s*")
             .Where(p => p.Trim().Length > 0).ToArray();
         return parts.Length == 0 ? [text] : parts;
     }

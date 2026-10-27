@@ -150,6 +150,54 @@ internal static class Snapshot
     // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
     // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
     // is missed - and the log answers, in a throwaway folder.
+    // "MiniCloClo.exe --ocr-test <report file>": shows a picture of English,
+    // then Arabic, text in a window and reads it back with text recognition.
+    public static int OcrTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string> { $"text recognition available: {ScreenText.CanRecognize}" };
+        ScreenText.Trace = note => lines.Add($"  {note}");
+        var app = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+        app.Startup += async (_, _) =>
+        {
+            foreach (var (sample, rtl) in new[]
+                     {
+                         ("Take one tablet twice a day after meals.\nKeep out of the reach of children.", false),
+                         ("قرص واحد مرتين يومياً بعد الأكل.\nيحفظ بعيداً عن متناول الأطفال.", true),
+                     })
+            {
+                // The text drawn into a picture, so nothing but pixels is read.
+                var block = new System.Windows.Controls.TextBlock
+                {
+                    Text = sample, FontSize = 28, Margin = new Thickness(24), Foreground = System.Windows.Media.Brushes.Black,
+                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+                    FlowDirection = rtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+                };
+                var panel = new System.Windows.Controls.Border { Background = System.Windows.Media.Brushes.White, Child = block, Width = 760, Height = 160 };
+                panel.Measure(new Size(760, 160));
+                panel.Arrange(new Rect(0, 0, 760, 160));
+                var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(760, 160, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                bitmap.Render(panel);
+                var window = new Window
+                {
+                    WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, Topmost = true, Left = 200, Top = 200,
+                    SizeToContent = SizeToContent.WidthAndHeight, Content = new System.Windows.Controls.Image { Source = bitmap, Stretch = System.Windows.Media.Stretch.None },
+                };
+                window.Show();
+                await Task.Delay(800);
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+                var area = ScreenText.AreaToRead(hwnd, underPointer: false);
+                lines.Add($"area: {area}");
+                var text = area is { } found ? await ScreenText.ReadAsync(found) : null;
+                lines.Add($"read: [{text?.Replace("\n", " | ") ?? "-"}]");
+                window.Close();
+            }
+            File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+            app.Shutdown();
+        };
+        app.Run();
+        return 0;
+    }
+
     // "MiniCloClo.exe --selection-test <report file> [copy]": reads the text
     // selected in the active app (UI Automation, or with "copy" by copying
     // it alone) and checks the clipboard is put back.
@@ -204,7 +252,7 @@ internal static class Snapshot
         foreach (var heard in new[] { "Two.", "2", "Number 3.", "Play the first one.", "The second one.", "اتنين", "شغل التاني", "رقم 4", "Next.", "التالي", "Again.", "One more time." })
             lines.Add($"\"{heard}\" -> number {SearchVoiceCommand.Choice(heard)?.ToString() ?? "-"}, next {SearchVoiceCommand.IsNextOne(heard)}, again {SearchVoiceCommand.IsAgain(heard)}");
         lines.Add("-- controls (and what they'd otherwise be) --");
-        foreach (var heard in new[] { "Pause the song.", "Resume.", "Next song.", "Previous song.", "وقف الأغنية", "كمل الأغنية", "الأغنية الجاية", "Pause.", "Next.", "Stop." })
+        foreach (var heard in new[] { "Read.", "Read this.", "اقرأ", "إقرأ", "اقرا ده", "Read the news.", "Pause the song.", "Resume.", "Next song.", "Previous song.", "وقف الأغنية", "كمل الأغنية", "الأغنية الجاية", "Pause.", "Next.", "Stop." })
             lines.Add($"\"{heard}\" -> {SearchVoiceCommand.TryControl(heard)?.ToString() ?? "-"}, command {(WidgetVoiceCommands.TryMatch(heard, out var c) ? c.ToString() : "-")}");
         lines.Add("-- YouTube results from a saved page (links in order) --");
         var links = new (string, string)[]

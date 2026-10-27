@@ -30,10 +30,10 @@ internal static class ApprovedVoiceAppLauncher
     // lists only the names, which steers Whisper toward their spelling.
     internal const string RecognitionPrompt =
         "What time is it? Date. Next prayer. Prayer times. Quran. Quran surah. Reminders. Help. Stop. I prayed. " +
-        "Notepad. Word. Settings. Calculator. Narrator. Magnifier. Shut down. Close all. Force close. Cancel. Search YouTube. Search Spotify.";
+        "Notepad. Word. Settings. Calculator. Narrator. Magnifier. Shut down. Close all. Force close. Cancel. Search YouTube. Search Spotify. Read this.";
     internal const string ArabicRecognitionPrompt =
         "الساعة كام؟ التاريخ. الصلاة الجاية. مواقيت الصلاة. القرآن. التذكيرات. مساعدة. اسكت. صليت. " +
-        "المفكرة. وورد. الإعدادات. الآلة الحاسبة. الراوي. المكبر. اقفل الجهاز. اقفلهم. اقفلهم غصب. إلغاء. ابحث في يوتيوب. ابحث في سبوتيفاي.";
+        "المفكرة. وورد. الإعدادات. الآلة الحاسبة. الراوي. المكبر. اقفل الجهاز. اقفلهم. اقفلهم غصب. إلغاء. ابحث في يوتيوب. ابحث في سبوتيفاي. اقرأ.";
 
     // Shutting down can't be undone like opening an app, so only these exact
     // phrases count (after the same wake name and "now" tolerance); a sound-

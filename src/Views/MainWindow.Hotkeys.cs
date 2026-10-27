@@ -9,8 +9,9 @@ namespace MiniCloClo;
 // Ctrl+Alt shortcuts that work from any app, so nobody has to find the
 // widget on the screen: T the time, D the date, P the next prayer, A all of
 // today's prayer times, Q the Quran, R reminders, K contacts and calls, V
-// talk (press again to finish), L read the selected text aloud, S stop
-// sounds, M the menu, H help.
+// talk (press again to finish), L read the selected text aloud (or the
+// picture under the pointer), W read the whole window, S stop sounds, M the
+// menu, H help.
 // Registered with Windows'
 // RegisterHotKey, which only reports these exact key combinations - no
 // other keystroke is seen. A combination another app already uses is
@@ -38,6 +39,7 @@ public partial class MainWindow
         ('Y', "medicine taken", "خدت الدوا", MedicineTaken),
         ('V', "talk", "الكلام", ToggleKeyboardVoiceCommand),
         ('L', "read the selected text", "قراية الكلام المتحدد", ReadSelection),
+        ('W', "read the whole window", "قراية الشباك كله", ReadScreen),
         ('S', "stop sounds", "إيقاف الصوت", () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }),
         ('M', "the menu", "القائمة", OpenMenu),
         ('H', "help", "المساعدة", SayHelp),

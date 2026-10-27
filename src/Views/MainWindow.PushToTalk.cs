@@ -331,6 +331,7 @@ public partial class MainWindow
             case WidgetVoiceCommand.SayAgain: SayLastAnswerAgain(); break;
             case WidgetVoiceCommand.MedicineLog: SayMedicineLog(heard); break;
             case WidgetVoiceCommand.ReadSelection: ReadSelection(); break;
+            case WidgetVoiceCommand.ReadScreen: ReadScreen(); break;
         }
     }
 

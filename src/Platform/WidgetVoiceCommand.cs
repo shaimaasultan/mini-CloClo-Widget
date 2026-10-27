@@ -9,7 +9,7 @@ namespace MiniCloClo;
 // only these fixed phrases count (compared after the same cleanup, with the
 // wake name, "please" and "now" tolerated); the transcript is never used as
 // anything but a key into this table.
-internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain, MedicineLog, ReadSelection }
+internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain, MedicineLog, ReadSelection, ReadScreen }
 
 internal static class WidgetVoiceCommands
 {
@@ -78,10 +78,18 @@ internal static class WidgetVoiceCommands
         ]),
         // The text selected in another app, read aloud.
         (WidgetVoiceCommand.ReadSelection, [
-            "read this", "read it", "read this out", "read it out loud", "read this aloud", "read the selection",
+            "read", "read this", "read it", "read for me", "read to me", "read it to me", "read this out", "read it out loud", "read this aloud", "read the selection",
             "read the selected text", "read selected text", "read what i selected", "read the text", "read aloud", "read out loud",
-            "اقرا ده", "اقرا دي", "اقراها", "اقراه", "اقرالي ده", "اقرالي", "اقرا المتحدد", "اقرا الكلام المتحدد", "اقرا اللي متحدد",
+            "اقرا", "اقري", "اقرا ليا", "اقرا ده", "اقرا دي", "اقراها", "اقراه", "اقرالي ده", "اقرالي", "اقرا المتحدد", "اقرا الكلام المتحدد", "اقرا اللي متحدد",
             "اقرا الكلام ده", "اقرا النص", "اقرا بصوت عالي",
+            "read the picture", "read this picture", "read the image", "read this image", "read the photo",
+            "اقرا الصوره", "اقرا الصوره دي", "اقرا الصوره ده",
+        ]),
+        // The whole window, by text recognition.
+        (WidgetVoiceCommand.ReadScreen, [
+            "read the screen", "read the window", "read the page", "read this page", "read this window", "read everything",
+            "read the whole page", "read the whole screen", "read my screen",
+            "اقرا الشاشه", "اقرا الصفحه", "اقرا الصفحه دي", "اقرا الشباك", "اقرا كل حاجه", "اقرا الشاشه كلها", "اقرا الصفحه كلها",
         ]),
         // The medicine log (#29).
         (WidgetVoiceCommand.MedicineLog, [

@@ -14,8 +14,8 @@ can't see the screen well. It keeps only:
   Holiday?": Islamic dates worked out on the PC, holidays and your own notes.
 - **Pull** — "pull dates", "pull news": fresh dates or headlines, after "yes"
   (off until turned on).
-- **Read aloud** — select text in any app and click 🔊: read in Arabic or
-  English, on your PC.
+- **Read aloud** — select text in any app and click 🔊, or point at a picture:
+  read in Arabic or English, on your PC.
 - **Search and play** — "search YouTube", "search Spotify": the top results
   read aloud, and the one you choose played (off until turned on).
 - **The avatar**, which changes with what's happening (prayer clothes, reading
@@ -144,7 +144,8 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
 | Search / ابحث (or "search YouTube", "ابحث في سبوتيفاي") | Searches YouTube or Spotify, reads the top results and plays the one you choose ([Search and play](#search-and-play)) — off until turned on |
-| Read this / اقرا ده (or "read the selection", "اقرا الكلام المتحدد") | Reads the text selected in any app aloud ([Read aloud](#read-aloud)) |
+| Read / اقرا (or "read this", "اقرا ده", "read the picture") | Reads the text selected in any app aloud — or, with nothing selected, the text in the picture under the mouse ([Read aloud](#read-aloud)) |
+| Read the screen / اقرا الشاشة (or "read the page") | Reads all the text in the window you're using, by text recognition |
 | Pause the song, resume, next song, previous song / وقف الأغنية، كمل الأغنية، الأغنية الجاية، الأغنية اللي فاتت | Controls what Spotify or a video plays now |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
@@ -174,7 +175,8 @@ noisy microphone from a misheard word.
 | **I** | Questions and answers |
 | **Y** | Medicine taken (answers "Did you take it?") |
 | **V** | Talk (press again when done) |
-| **L** | Read the selected text aloud |
+| **L** | Read the selected text aloud (or the picture under the mouse) |
+| **W** | Read the whole window aloud |
 | **S** | Stop sounds |
 | **M** | The menu (opens with the keyboard in it) |
 | **H** | Help |
@@ -328,8 +330,9 @@ writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 
 Select text in **any app** — a web page in Edge, an email, a Word document, a
 PDF, Notepad — then click the **🔊 icon** on the widget, press **Ctrl+Alt+L**,
-or say **"read this"** / **"اقرا ده"** (also in the menu: *Read the selected
-text aloud*). Keeper reads it aloud:
+or hold right-click and say **"read"** / **"اقرا"** ("read this", "اقرا ده"
+work too; holding the button doesn't clear the selection), or use the menu:
+*Read the selected text aloud*. Keeper reads it aloud:
 
 - **Arabic or English, by itself:** Arabic with the Arabic voice (Hoda) and
   English with the English one (David); a text with both is read with both,
@@ -337,7 +340,21 @@ text aloud*). Keeper reads it aloud:
 - **"Stop"** stops it; **"again"** reads it once more; a reminder pauses it
   and it carries on from the sentence it was on.
 - Up to about 20,000 characters (a select-all of a long document reads the
-  beginning). Nothing selected: Keeper says so.
+  beginning).
+
+**Text in pictures, too.** With **nothing selected**, "read" / 🔊 / Ctrl+Alt+L
+reads the text in the **picture under the mouse pointer** — a scanned letter,
+a photo of a medicine box, a screenshot, an image on a web page — or, when the
+pointer isn't on a picture, the page in that window. **"Read the screen"** /
+**"اقرا الشاشة"** (or *"read the page"*, Ctrl+Alt+W, or the menu's *Read the
+whole window aloud*) reads all the text in the window you're using. The text
+is found with **Windows' own text recognition (OCR)**, on your PC: each line
+is recognized in English and in Arabic, and the reading with more letters of
+its own script wins (Arabic lines are put in right-to-left order). The widget
+hides for that moment so its own clock isn't read; the picture is captured in
+memory only and let go. Arabic needs the Arabic language added in Windows
+(*Settings → Time & language → Language*), which brings its text recognition.
+Nothing found: Keeper says so.
 
 **Offline, on your PC only.** The text is taken the way Narrator does it —
 Windows UI Automation asks the app for its selection — and read by Windows'
@@ -567,6 +584,8 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--ocr-test <file>` shows a picture of English, then Arabic, text and
+  reads it back with text recognition.
 - `--selection-test <file> [copy]` reads the text selected in the active app
   (UI Automation, or with `copy` by copying it) and checks the clipboard is
   put back.
