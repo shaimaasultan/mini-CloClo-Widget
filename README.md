@@ -24,6 +24,13 @@ can't see the screen well. It keeps only:
 
 ### What's new
 
+- **[1.10](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.10.0)** — **learns your mishearings**: when a
+  command isn't understood and the next one works, Keeper offers to remember
+  it ([Learning your mishearings](#learning-your-mishearings)); **settings
+  kept per city**: each kind in its own named file and folder in
+  `%LOCALAPPDATA%\MiniCloClo` (never Roaming), and going back to a city brings
+  back its prayer times, reminders, questions and pull tools
+  ([Where things are kept](#where-things-are-kept)).
 - **[1.9](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.9.0)** — **"read" reads pictures too**: with nothing
   selected, the text in the picture under the mouse (a scanned letter, a
   medicine box, a screenshot); **"read the screen"** / **"اقرا الشاشة"** reads
