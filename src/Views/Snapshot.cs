@@ -150,6 +150,119 @@ internal static class Snapshot
     // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
     // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
     // is missed - and the log answers, in a throwaway folder.
+    // "MiniCloClo.exe --settings-test <report file>": the settings files (#45)
+    // in a throwaway folder - an old one-file settings.json split into named
+    // files and folders, a move to London that starts from the current
+    // settings, the way back to Mississauga bringing back what was set there,
+    // and the first split's flat "<part>_<place>.json" files moved into
+    // their folders.
+    public static int SettingsTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        var folder = Path.Combine(Path.GetTempPath(), "MiniCloClo-settings-test");
+        if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+        Directory.CreateDirectory(folder);
+        WidgetSettings.FolderOverride = folder;
+        QuranStore.FolderOverride = folder;
+        void Files(string when)
+        {
+            lines.Add($"-- files {when} --");
+            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Order())
+                lines.Add($"   {Path.GetRelativePath(folder, file)}");
+        }
+        string Show(WidgetSettings s) =>
+            $"city {s.City}, method {s.PrayerCalculationMethod}, azan {s.PrayerAzanEnabled}, reminders [{string.Join(", ", s.CustomReminders.Select(r => r.Message))}], " +
+            $"topics {s.Topics.Count}, pull {s.AllowPullCommands}, news feed {(s.PullToolSettings.TryGetValue("news", out var news) && news.TryGetValue("englishFeed", out var feed) ? feed : "-")}, " +
+            $"contacts {s.Contacts.Count}, size {s.WidgetSize}, search {s.AllowSearch}";
+        try
+        {
+            // The old way: everything in one settings.json.
+            var old = new WidgetSettings
+            {
+                City = "Mississauga", Latitude = 43.59, Longitude = -79.64, LocationTimeZoneId = "Eastern Standard Time",
+                PrayerCalculationMethod = "isna", WidgetSize = 2.0, AllowSearch = true, AllowPullCommands = true,
+                CustomReminders = [new CustomReminderSettings { Message = "Drink water" }, new CustomReminderSettings { Message = "Evening medicine", WaitForAnswer = true }],
+                Contacts = [new ContactSettings { Name = "Test", Number = "4165550100" }],
+                PullToolSettings = new() { ["news"] = new() { ["englishFeed"] = "https://example.com/canada.xml" } },
+            };
+            File.WriteAllText(Path.Combine(folder, "settings.json"), System.Text.Json.JsonSerializer.Serialize(old));
+            File.WriteAllText(Path.Combine(folder, "settings.before-medicine.json"), System.Text.Json.JsonSerializer.Serialize(old));
+            File.WriteAllText(Path.Combine(folder, "quran.json"), "{}");
+            Files("before (one settings.json)");
+
+            var loaded = WidgetSettings.Load();
+            QuranStore.Load();
+            lines.Add($"loaded: {Show(loaded)}");
+            Files("after the split");
+            var reminders = File.ReadAllText(Path.Combine(folder, @"reminders\mississauga-ca\settings.json"));
+            lines.Add($@"reminders\mississauga-ca\settings.json has its place: {reminders.Contains("\"Location\"") && reminders.Contains("Mississauga") && reminders.Contains("43.59")}");
+            var newsFile = File.ReadAllText(Path.Combine(folder, @"tools\pull\news\mississauga-ca\settings.json"));
+            lines.Add($@"tools\pull\news\mississauga-ca\settings.json has its place and feed: {newsFile.Contains("\"Location\"") && newsFile.Contains("canada.xml")}");
+            var general = File.ReadAllText(Path.Combine(folder, "settings.json"));
+            lines.Add($"settings.json keeps no city, reminders, contacts or prayer times: {!general.Contains("City") && !general.Contains("CustomReminders") && !general.Contains("Contacts") && !general.Contains("PrayerCalculationMethod")}");
+
+            // Moving to London: starts from what is in use, then changed there.
+            loaded.City = "London";
+            loaded.Latitude = 51.51;
+            loaded.Longitude = -0.13;
+            loaded.LocationTimeZoneId = "GMT Standard Time";
+            loaded.Save();
+            lines.Add($"to London - brought back: {loaded.PlaceRestored}; {Show(loaded)}");
+            loaded.PrayerCalculationMethod = "mwl";
+            loaded.CustomReminders = [new CustomReminderSettings { Message = "Tea at four" }];
+            loaded.AllowPullCommands = false; // not per place either
+            loaded.PullToolSettings = new() { ["news"] = new() { ["englishFeed"] = "https://example.com/london.xml" } };
+            loaded.WidgetSize = 1.0; // not per place: the same everywhere
+            loaded.Save();
+            lines.Add($"changed in London: {Show(loaded)}");
+            Files("after London");
+
+            // Back to Mississauga: what was set there comes back.
+            loaded.City = "Mississauga";
+            loaded.Latitude = 43.59;
+            loaded.Longitude = -79.64;
+            loaded.LocationTimeZoneId = "Eastern Standard Time";
+            loaded.Save();
+            lines.Add($"back to Mississauga - brought back: {loaded.PlaceRestored}; {Show(loaded)}");
+            var again = WidgetSettings.Load();
+            lines.Add($"loaded again: {Show(again)}");
+            var london = File.ReadAllText(Path.Combine(folder, @"reminders\london-gb\settings.json"));
+            lines.Add($"London's reminders kept: {london.Contains("Tea at four") && !london.Contains("Drink water")}");
+            var londonNews = File.ReadAllText(Path.Combine(folder, @"tools\pull\news\london-gb\settings.json"));
+            lines.Add($"London's news feed kept: {londonNews.Contains("london.xml")}");
+
+            // The first split's flat files (1.10 before the folders).
+            Directory.Delete(folder, recursive: true);
+            Directory.CreateDirectory(folder);
+            var place = "\"Location\": { \"City\": \"Mississauga\", \"Latitude\": 43.59, \"Longitude\": -79.64, \"LocationTimeZoneId\": \"Eastern Standard Time\" }";
+            File.WriteAllText(Path.Combine(folder, "location.json"), "{ \"City\": \"Mississauga\", \"Latitude\": 43.59, \"Longitude\": -79.64, \"LocationTimeZoneId\": \"Eastern Standard Time\" }");
+            File.WriteAllText(Path.Combine(folder, "settings.json"), "{ \"WidgetSize\": 2.0 }");
+            File.WriteAllText(Path.Combine(folder, "prayer-times_mississauga-ca.json"), "{ " + place + ", \"PrayerCalculationMethod\": \"isna\" }");
+            File.WriteAllText(Path.Combine(folder, "reminders_mississauga-ca.json"), "{ " + place + ", \"CustomReminders\": [ { \"Message\": \"Drink water\" } ] }");
+            File.WriteAllText(Path.Combine(folder, "questions-and-answers_mississauga-ca.json"), "{ " + place + ", \"Topics\": [], \"TopicsSeeded\": true }");
+            File.WriteAllText(Path.Combine(folder, "pull-tools_mississauga-ca.json"), "{ " + place + ", \"AllowPullCommands\": true, \"PullToolSettings\": { \"news\": { \"englishFeed\": \"https://example.com/canada.xml\" } } }");
+            File.WriteAllText(Path.Combine(folder, "reminders_london-gb.json"), "{ \"CustomReminders\": [ { \"Message\": \"Tea at four\" } ] }");
+            File.WriteAllText(Path.Combine(folder, "search.json"), "{ \"AllowSearch\": true, \"SearchResultCount\": 3 }");
+            Directory.CreateDirectory(Path.Combine(folder, "pull"));
+            File.WriteAllText(Path.Combine(folder, "pull", "news.result.json"), "{}");
+            Files("before (the first split's flat files)");
+            var flat = WidgetSettings.Load();
+            lines.Add($"loaded: {Show(flat)}, results read {flat.SearchResultCount}");
+            Files("after moving into folders");
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"{ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            WidgetSettings.FolderOverride = null;
+            QuranStore.FolderOverride = null;
+        }
+        File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+        return 0;
+    }
+
     // "MiniCloClo.exe --learn-test <report file>": learning mishearings (#37)
     // on a real (unshown) widget, muted, in a throwaway folder - what is
     // offered, learned, used and forgotten, and what is never learned.
@@ -575,6 +688,10 @@ internal static class Snapshot
     {
         var lines = new System.Collections.Generic.List<string>();
         var folder = Path.Combine(Path.GetTempPath(), "MiniCloClo-pull-test");
+        // Results go to tools\pull\<tool>\test-place\ in a throwaway data folder.
+        var data = Path.Combine(Path.GetTempPath(), "MiniCloClo-pull-test-data");
+        if (Directory.Exists(data)) Directory.Delete(data, recursive: true);
+        WidgetSettings.FolderOverride = data;
         try
         {
             if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
@@ -604,7 +721,7 @@ internal static class Snapshot
             foreach (var tool in tools)
             {
                 var clock = System.Diagnostics.Stopwatch.StartNew();
-                var (outcome, file) = PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, own)).GetAwaiter().GetResult();
+                var (outcome, file) = PullTools.RunAsync(tool, PullTools.EffectiveSettings(tool, own), "test-place").GetAwaiter().GetResult();
                 var line = $"{tool.Id}: {outcome} in {clock.Elapsed.TotalSeconds:0.0} s";
                 if (file != null && tool.Result == PullTool.ImportResult)
                 {
@@ -647,7 +764,7 @@ internal static class Snapshot
             foreach (var news in PullTools.Load().Where(t => t.Id == "news"))
                 foreach (var arabic in new[] { false, true })
                 {
-                    var (newsOutcome, newsFile) = PullTools.RunAsync(news, PullTools.EffectiveSettings(news, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>()), arabic).GetAwaiter().GetResult();
+                    var (newsOutcome, newsFile) = PullTools.RunAsync(news, PullTools.EffectiveSettings(news, new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>()), "test-place", arabic).GetAwaiter().GetResult();
                     var reading = newsFile != null ? PullTools.ReadReading(newsFile) : null;
                     lines.Add($"-- the news tool ({(arabic ? "Arabic" : "English")}): {newsOutcome}, {reading?.Title ?? "-"}, {reading?.Items.Count ?? 0} headlines");
                 }
@@ -660,7 +777,7 @@ internal static class Snapshot
                 var toronto = OfflineCities.Find("Toronto")!;
                 var place = new PullTools.Place(toronto.Name, OfflineCities.CountryCode(toronto), OfflineCities.RegionCode(toronto));
                 lines.Add($"place: {place}");
-                var (outcome, file) = PullTools.RunAsync(dates, settings, place: place).GetAwaiter().GetResult();
+                var (outcome, file) = PullTools.RunAsync(dates, settings, "test-place", place: place).GetAwaiter().GetResult();
                 lines.Add($"dates: {outcome}");
                 if (file != null)
                 {
@@ -671,6 +788,9 @@ internal static class Snapshot
                 }
             }
         }
+        lines.Add("-- result files: " + string.Join(", ", Directory.Exists(data)
+            ? Directory.GetFiles(data, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(data, f)).Order() : []));
+        WidgetSettings.FolderOverride = null;
         File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
         return 0;
     }

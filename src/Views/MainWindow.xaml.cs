@@ -635,17 +635,26 @@ public partial class MainWindow : Window
         if (FocusOpenDialog()) return;
         var dialog = new PrayerTimesWindow(_settings);
         if (ShowDialogWindow(dialog) != true) return;
+        // What the dialog showed, to tell what was changed in it.
+        var (method, asr, audio, azan, look, announce, preAlert) = (_settings.PrayerCalculationMethod, _settings.PrayerAsrMethod,
+            _settings.PrayerAzanAudioPath, _settings.PrayerAzanEnabled, _settings.PrayerLookEnabled, _settings.PrayerAnnounce,
+            _settings.PrayerPreAlertMinutes);
         _settings.City = dialog.City;
         _settings.Latitude = WidgetSettings.RoundCoordinate(dialog.Latitude);
         _settings.Longitude = WidgetSettings.RoundCoordinate(dialog.Longitude);
         _settings.LocationTimeZoneId = dialog.TimeZoneId;
-        _settings.PrayerCalculationMethod = dialog.CalculationMethod;
-        _settings.PrayerAsrMethod = dialog.AsrMethod;
-        _settings.PrayerAzanAudioPath = dialog.AudioPath;
-        _settings.PrayerAzanEnabled = dialog.AzanEnabled;
-        _settings.PrayerLookEnabled = dialog.PrayerLookEnabled;
-        _settings.PrayerAnnounce = dialog.AnnounceEnabled;
-        _settings.PrayerPreAlertMinutes = dialog.PreAlertMinutes;
+        // A city kept before brings back its own prayer times, reminders,
+        // questions and pull tools (#45); then only what was changed in the
+        // dialog is applied on top.
+        _settings.Save();
+        var restored = _settings.PlaceRestored;
+        if (dialog.CalculationMethod != method) _settings.PrayerCalculationMethod = dialog.CalculationMethod;
+        if (dialog.AsrMethod != asr) _settings.PrayerAsrMethod = dialog.AsrMethod;
+        if (dialog.AudioPath != audio) _settings.PrayerAzanAudioPath = dialog.AudioPath;
+        if (dialog.AzanEnabled != azan) _settings.PrayerAzanEnabled = dialog.AzanEnabled;
+        if (dialog.PrayerLookEnabled != look) _settings.PrayerLookEnabled = dialog.PrayerLookEnabled;
+        if (dialog.AnnounceEnabled != announce) _settings.PrayerAnnounce = dialog.AnnounceEnabled;
+        if (dialog.PreAlertMinutes != preAlert) _settings.PrayerPreAlertMinutes = dialog.PreAlertMinutes;
         _settings.Save();
         UpdateActivityState(); // turning the prayer look off ends one in progress
         _lastPrayerCheckUtc = DateTimeOffset.UtcNow;
@@ -654,7 +663,10 @@ public partial class MainWindow : Window
         _azanPlayer?.Stop();
         ResumeVoiceAfterAudio();
         UpdateNextPrayer();
-        Voice.Say($"Saved. Prayer times are for {_settings.City}.", $"اتحفظ. المواقيت لمدينة {_settings.City}.");
+        Voice.Say($"Saved. Prayer times are for {_settings.City}." +
+                  (restored ? $" Your {_settings.City} settings are back: prayer times, reminders, questions and pull tools." : ""),
+            $"اتحفظ. المواقيت لمدينة {_settings.City}." +
+            (restored ? $" إعداداتك بتاعة {_settings.City} رجعت: المواقيت والتذكيرات والأسئلة وأدوات السحب." : ""));
     }
 
     // One dialog at a time; asking again brings it back to the front.

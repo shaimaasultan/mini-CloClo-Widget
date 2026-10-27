@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MiniCloClo;
 
@@ -96,8 +97,11 @@ public class WidgetSettings
     // log, learned phrases - is in %LOCALAPPDATA%\MiniCloClo: the local
     // folder, never copied anywhere (a domain's roaming profile copies
     // %APPDATA% to its server at sign-out).
-    internal static string FolderPath =>
+    internal static string FolderPath => FolderOverride ??
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MiniCloClo");
+
+    // Debug tests point this at a throwaway folder.
+    internal static string? FolderOverride;
 
     // Before 1.10 it was in %APPDATA%\MiniCloClo: moved here once, at
     // startup. A file already here is kept, and its old copy left where it
@@ -122,23 +126,232 @@ public class WidgetSettings
         }
     }
 
-    private static string FilePath => Path.Combine(FolderPath, "settings.json");
+    // The settings are kept in several files in FolderPath, each named for
+    // what it holds (#45). Parts that belong to a place - prayer times,
+    // reminders, questions and answers, each pull tool's options - are kept
+    // in a folder per place ({0}: "mississauga-ca") with that place inside
+    // ("Location"), so going back to a city brings back what was set there.
+    // The tools each have their folder in tools\. Everything not listed here
+    // is in settings.json.
+    private static readonly (string File, string[] Keys)[] Parts =
+    [
+        ("location.json", [nameof(City), nameof(Latitude), nameof(Longitude), nameof(LocationTimeZoneId)]),
+        (@"prayer-times\{0}\settings.json", [nameof(PrayerCalculationMethod), nameof(PrayerAsrMethod), nameof(PrayerAzanEnabled),
+            nameof(PrayerAzanAudioPath), nameof(PrayerAnnounce), nameof(PrayerPreAlertMinutes), nameof(PrayerLookEnabled)]),
+        (@"reminders\{0}\settings.json", [nameof(CustomReminders)]),
+        (@"tools\questions-and-answers\{0}\settings.json", [nameof(Topics), nameof(TopicsSeeded)]),
+        (@"tools\pull\settings.json", [nameof(AllowPullCommands)]),
+        (@"tools\search\settings.json", [nameof(AllowSearch), nameof(SearchResultCount)]),
+        ("contacts.json", [nameof(Contacts), nameof(PhoneDeviceId), nameof(PhoneName)]),
+    ];
+    private const string GeneralFile = "settings.json";
+    private const string LocationKey = "Location";
+
+    // Each pull tool's own options, per place:
+    // tools\pull\<tool>\<place>\settings.json, { "Location", "Settings" },
+    // beside the result its last pull brought (PullTools).
+    private const string PullToolFile = @"tools\pull\{1}\{0}\settings.json", PullToolKey = "Settings";
+    internal static string PullToolFolder(string tool, string place) => Path.Combine(FolderPath, "tools", "pull", tool, place);
+    private static readonly System.Text.RegularExpressions.Regex ToolId = new("^[a-z0-9-]{1,30}$");
+
+    private static bool IsPerPlace(string file) => file.Contains("{0}");
+
+    // The place the per-place parts were loaded for; a save for another
+    // place (the city was changed) first brings back what that place had.
+    private string? _place;
+
+    // Set by a save that changed the place to one kept before: its own
+    // prayer times, reminders, questions and pull tools came back.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool PlaceRestored { get; private set; }
+
+    // "mississauga-ca", "london-gb": the city, and its country when it is in
+    // the offline list (so London, Ontario isn't London, England); typed-in
+    // coordinates without a name use the coordinates.
+    internal static string PlaceKey(string city, double latitude, double longitude)
+    {
+        var name = new string(city.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+        name = string.Join("-", name.Split('-', StringSplitOptions.RemoveEmptyEntries));
+        if (name.Length > 40) name = name[..40];
+        if (name.Length == 0)
+            name = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{latitude:0.00}_{longitude:0.00}").Replace('.', 'p');
+        var country = OfflineCities.ForPlace(city, latitude, longitude) is { } known ? OfflineCities.CountryCode(known) : null;
+        return country is { Length: > 0 } ? $"{name}-{country.ToLowerInvariant()}" : name;
+    }
+
+    internal string PlaceKey() => PlaceKey(City, Latitude, Longitude);
+
+    private static string PartFile(string file, string place, string tool = "") =>
+        Path.Combine(FolderPath, string.Format(file, place, tool));
 
     public static WidgetSettings Load()
     {
         try
         {
-            if (File.Exists(FilePath))
+            SplitOneFileSettings();
+            MoveIntoFolders();
+            var location = ReadPart(PartFile(Parts[0].File, ""));
+            var general = ReadPart(Path.Combine(FolderPath, GeneralFile));
+            if (location != null || general != null)
             {
-                var loaded = JsonSerializer.Deserialize<WidgetSettings>(ReadSettingsBytes(), LoadOptions);
-                if (loaded != null) return loaded.ValidateAndNormalize();
+                var merged = new JsonObject();
+                Merge(merged, location);
+                var defaults = new WidgetSettings();
+                var place = PlaceKey(
+                    merged[nameof(City)]?.GetValue<string>() ?? defaults.City,
+                    merged[nameof(Latitude)]?.GetValue<double>() ?? defaults.Latitude,
+                    merged[nameof(Longitude)]?.GetValue<double>() ?? defaults.Longitude);
+                Merge(merged, general);
+                foreach (var (file, _) in Parts.Skip(1))
+                    Merge(merged, ReadPart(PartFile(file, place)));
+                Merge(merged, ReadPullTools(place));
+                var loaded = merged.Deserialize<WidgetSettings>(LoadOptions);
+                if (loaded != null)
+                {
+                    loaded._place = place;
+                    return loaded.ValidateAndNormalize();
+                }
             }
         }
         catch
         {
-            // Corrupt or unreadable settings file: fall back to defaults below.
+            // Corrupt or unreadable settings: fall back to defaults below.
         }
         return ForThisPc();
+    }
+
+    // One part's settings (null: missing or unreadable). The place a
+    // per-place file is for ("Location") is left out: the place in use is
+    // location.json's.
+    private static JsonObject? ReadPart(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            if (JsonNode.Parse(ReadSettingsBytes(path), documentOptions: new JsonDocumentOptions { MaxDepth = 16 }) is not JsonObject part) return null;
+            part.Remove(LocationKey);
+            return part;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void Merge(JsonObject into, JsonObject? part)
+    {
+        if (part == null) return;
+        foreach (var (key, value) in part) into[key] = value?.DeepClone();
+    }
+
+    // The pull tools' options kept for a place, as { "PullToolSettings":
+    // { "<tool>": { ... } } } (null: none kept there).
+    private static JsonObject? ReadPullTools(string place)
+    {
+        var pull = Path.Combine(FolderPath, "tools", "pull");
+        if (!Directory.Exists(pull)) return null;
+        var tools = new JsonObject();
+        foreach (var folder in Directory.GetDirectories(pull).Order(StringComparer.OrdinalIgnoreCase))
+        {
+            var tool = Path.GetFileName(folder);
+            if (ToolId.IsMatch(tool) && ReadPart(PartFile(PullToolFile, place, tool))?[PullToolKey] is JsonObject values)
+                tools[tool] = values.DeepClone();
+        }
+        return tools.Count == 0 ? null : new JsonObject { [nameof(PullToolSettings)] = tools };
+    }
+
+    // Before #45 everything was in one settings.json (City, prayer times,
+    // reminders, contacts... together): split into the named files once. The
+    // old file is kept in backups, as is the backup made before the medicine
+    // reminders; quran.json is now quran-progress.json.
+    private static void SplitOneFileSettings()
+    {
+        var general = Path.Combine(FolderPath, GeneralFile);
+        if (!File.Exists(PartFile(Parts[0].File, "")) && File.Exists(general) &&
+            ReadPart(general) is { } old && old.ContainsKey(nameof(City)) &&
+            old.Deserialize<WidgetSettings>(LoadOptions) is { } settings)
+        {
+            var backups = Path.Combine(FolderPath, "backups");
+            Directory.CreateDirectory(backups);
+            File.Copy(general, Path.Combine(backups, $"settings-{File.GetLastWriteTime(general):yyyy-MM-dd}-before-split.json"), overwrite: false);
+            settings.ValidateAndNormalize();
+            settings.WriteFiles(settings.PlaceKey());
+        }
+        var quran = Path.Combine(FolderPath, "quran.json");
+        var quranProgress = Path.Combine(FolderPath, "quran-progress.json");
+        if (File.Exists(quran) && !File.Exists(quranProgress)) File.Move(quran, quranProgress);
+        foreach (var before in Directory.Exists(FolderPath) ? Directory.GetFiles(FolderPath, "settings.before-*.json") : [])
+        {
+            var backups = Path.Combine(FolderPath, "backups");
+            Directory.CreateDirectory(backups);
+            var what = Path.GetFileNameWithoutExtension(before)["settings.".Length..];
+            var moved = Path.Combine(backups, $"settings-{File.GetLastWriteTime(before):yyyy-MM-dd}-{what}.json");
+            if (!File.Exists(moved)) File.Move(before, moved);
+        }
+    }
+
+    // The first split (#45) kept per-place parts as "<part>_<place>.json"
+    // beside settings.json: moved into their folders once, a copy of each
+    // kept in backups. The pull results folder (pull\) is now each tool's
+    // folder, so the old one goes to backups too.
+    private static void MoveIntoFolders()
+    {
+        if (!Directory.Exists(FolderPath)) return;
+        var flat = new System.Text.RegularExpressions.Regex("^(prayer-times|reminders|questions-and-answers|pull-tools)_(.+)\\.json$");
+        var old = Directory.GetFiles(FolderPath, "*.json")
+            .Select(file => (File: file, Match: flat.Match(Path.GetFileName(file))))
+            .Where(f => f.Match.Success)
+            .ToList();
+        var search = Path.Combine(FolderPath, "search.json");
+        var results = Path.Combine(FolderPath, "pull");
+        if (old.Count == 0 && !File.Exists(search) && !Directory.Exists(results)) return;
+        var backups = Path.Combine(FolderPath, "backups", $"settings-{DateTime.Now:yyyy-MM-dd}-before-folders");
+        Directory.CreateDirectory(backups);
+
+        // Pull on/off was kept per place: the one of the place in use.
+        var location = ReadPart(PartFile(Parts[0].File, ""));
+        var inUse = location?[nameof(City)] is JsonValue city && location[nameof(Latitude)] is JsonValue latitude && location[nameof(Longitude)] is JsonValue longitude
+            ? PlaceKey(city.GetValue<string>(), latitude.GetValue<double>(), longitude.GetValue<double>()) : null;
+        foreach (var (file, match) in old.OrderBy(f => f.Match.Groups[2].Value == inUse ? 0 : 1))
+        {
+            var (part, place) = (match.Groups[1].Value, match.Groups[2].Value);
+            if (!File.Exists(Path.Combine(backups, Path.GetFileName(file)))) File.Copy(file, Path.Combine(backups, Path.GetFileName(file)));
+            if (Read(file) is not { } content) continue;
+            if (part == "pull-tools")
+            {
+                var pull = PartFile(Parts.First(p => p.Keys.Contains(nameof(AllowPullCommands))).File, place);
+                if (!File.Exists(pull) && content[nameof(AllowPullCommands)] is { } allow)
+                    WriteFile(pull, new JsonObject { [nameof(AllowPullCommands)] = allow.DeepClone() });
+                if (content[nameof(PullToolSettings)] is JsonObject tools)
+                    foreach (var (tool, values) in tools)
+                        if (ToolId.IsMatch(tool) && values is JsonObject && PartFile(PullToolFile, place, tool) is var path && !File.Exists(path))
+                            WriteFile(path, new JsonObject { [LocationKey] = content[LocationKey]?.DeepClone(), [PullToolKey] = values.DeepClone() });
+            }
+            else if (PartFile(Parts.First(p => p.File.StartsWith(part) || p.File.Contains(@"\" + part + @"\")).File, place) is var path && !File.Exists(path))
+                WriteFile(path, content);
+            File.Delete(file);
+        }
+        if (File.Exists(search))
+        {
+            if (!File.Exists(Path.Combine(backups, "search.json"))) File.Copy(search, Path.Combine(backups, "search.json"));
+            var moved = PartFile(Parts.First(p => p.Keys.Contains(nameof(AllowSearch))).File, "");
+            if (!File.Exists(moved) && Read(search) is { } content) WriteFile(moved, content);
+            File.Delete(search);
+        }
+        if (Directory.Exists(results) && !Directory.Exists(Path.Combine(backups, "pull")))
+            Directory.Move(results, Path.Combine(backups, "pull"));
+
+        static JsonObject? Read(string path)
+        {
+            try
+            {
+                return JsonNode.Parse(ReadSettingsBytes(path), documentOptions: new JsonDocumentOptions { MaxDepth = 16 }) as JsonObject;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 
     // First run: the first listed city in the PC's own time zone (Windows'
@@ -160,11 +373,11 @@ public class WidgetSettings
         return settings;
     }
 
-    private static byte[] ReadSettingsBytes()
+    private static byte[] ReadSettingsBytes(string path)
     {
         // Read at most the limit plus one byte; checking FileInfo.Length alone
         // would allow a file that grows after the check to use unbounded memory.
-        using var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var buffer = new byte[MaxSettingsFileBytes + 1];
         var count = 0;
         while (count < buffer.Length)
@@ -254,30 +467,103 @@ public class WidgetSettings
     {
         try
         {
-            Directory.CreateDirectory(FolderPath);
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            // Written beside and then swapped in, so a crash mid-write can
-            // never leave a half-written file. The temporary file gets a
-            // random name and must not exist yet (CreateNew), so nothing can
-            // pre-create it as a link to redirect this write.
-            var temp = Path.Combine(FolderPath, "settings." + Path.GetRandomFileName() + ".tmp");
-            try
-            {
-                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (var writer = new StreamWriter(stream))
-                {
-                    writer.Write(json);
-                }
-                File.Move(temp, FilePath, overwrite: true);
-            }
-            finally
-            {
-                if (File.Exists(temp)) File.Delete(temp);
-            }
+            var place = PlaceKey();
+            PlaceRestored = false;
+            // The city was changed: a place kept before brings back its own
+            // prayer times, reminders, questions and pull tools; a new place
+            // starts from the ones in use. The old place's files stay as they
+            // were.
+            if (_place != null && place != _place) PlaceRestored = BringBackPlace(place);
+            _place = place;
+            WriteFiles(place);
         }
         catch
         {
             // Best-effort persistence; losing a save isn't fatal.
+        }
+    }
+
+    private bool BringBackPlace(string place)
+    {
+        var current = JsonSerializer.SerializeToNode(this) as JsonObject;
+        if (current == null) return false;
+        var found = false;
+        foreach (var kept in Parts.Where(p => IsPerPlace(p.File)).Select(p => ReadPart(PartFile(p.File, place))).Append(ReadPullTools(place)))
+            if (kept != null)
+            {
+                Merge(current, kept);
+                found = true;
+            }
+        if (!found || current.Deserialize<WidgetSettings>(LoadOptions)?.ValidateAndNormalize() is not { } restored) return false;
+        foreach (var key in Parts.Where(p => IsPerPlace(p.File)).SelectMany(p => p.Keys).Append(nameof(PullToolSettings)))
+            if (typeof(WidgetSettings).GetProperty(key) is { CanWrite: true } property)
+                property.SetValue(this, property.GetValue(restored));
+        return true;
+    }
+
+    private void WriteFiles(string place)
+    {
+        Directory.CreateDirectory(FolderPath);
+        if (JsonSerializer.SerializeToNode(this) is not JsonObject all) return;
+        var location = new JsonObject();
+        foreach (var key in Parts[0].Keys) location[key] = all[key]?.DeepClone();
+        var used = new HashSet<string> { nameof(PullToolSettings) };
+        foreach (var (file, keys) in Parts)
+        {
+            var part = new JsonObject();
+            if (IsPerPlace(file)) part[LocationKey] = location.DeepClone();
+            foreach (var key in keys)
+            {
+                part[key] = all[key]?.DeepClone();
+                used.Add(key);
+            }
+            WriteFile(PartFile(file, place), part);
+        }
+        // A tool whose options went back to its own (left out here) keeps
+        // its file for this place, emptied, so the old options can't return.
+        var pull = Path.Combine(FolderPath, "tools", "pull");
+        var tools = Directory.Exists(pull)
+            ? Directory.GetDirectories(pull).Select(Path.GetFileName).Where(t => t != null && ToolId.IsMatch(t) && Directory.Exists(PullToolFolder(t, place))).Cast<string>()
+            : [];
+        foreach (var tool in tools.Union(PullToolSettings.Keys))
+            WriteFile(PartFile(PullToolFile, place, tool), new JsonObject
+            {
+                [LocationKey] = location.DeepClone(),
+                [PullToolKey] = all[nameof(PullToolSettings)]?[tool]?.DeepClone() ?? new JsonObject(),
+            });
+        var general = new JsonObject();
+        foreach (var (key, value) in all)
+            if (!used.Contains(key)) general[key] = value?.DeepClone();
+        WriteFile(Path.Combine(FolderPath, GeneralFile), general);
+    }
+
+    // Written beside and then swapped in, so a crash mid-write can never
+    // leave a half-written file. The temporary file gets a random name and
+    // must not exist yet (CreateNew), so nothing can pre-create it as a link
+    // to redirect this write. A file that already says the same is left.
+    private static void WriteFile(string path, JsonObject content)
+    {
+        var json = content.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        try
+        {
+            if (File.Exists(path) && File.ReadAllText(path) == json) return;
+        }
+        catch (IOException) { }
+        var folder = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(folder);
+        var temp = Path.Combine(folder, Path.GetFileNameWithoutExtension(path) + "." + Path.GetRandomFileName() + ".tmp");
+        try
+        {
+            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(json);
+            }
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
         }
     }
 }

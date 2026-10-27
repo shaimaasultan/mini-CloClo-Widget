@@ -585,13 +585,68 @@ hidden, it keeps working and its shortcuts too.
 
 ## Where things are kept
 
-- Settings, reminders, contacts (names and numbers, in plain text) and your
-  questions and answers: `%LOCALAPPDATA%\MiniCloClo\settings.json`
-- Quran progress: `%LOCALAPPDATA%\MiniCloClo\quran.json`
-- Medicine log (30 days): `%LOCALAPPDATA%\MiniCloClo\medicine-log.json`
-- Learned phrases (text only): `%LOCALAPPDATA%\MiniCloClo\learned-phrases.json`
-- Error log (exception types only, no text you said or typed):
-  `%LOCALAPPDATA%\MiniCloClo\errors.log`
+Everything is in `%LOCALAPPDATA%\MiniCloClo` (`C:\Users\<you>\AppData\Local\MiniCloClo`),
+each kind of setting in its own file, named for what it holds. Settings that
+belong to a place have a folder per place, and each tool has its own folder
+under `tools`:
+
+```
+MiniCloClo\
+  settings.json, location.json, contacts.json, quran-progress.json,
+  medicine-log.json, learned-phrases.json, errors.log
+  prayer-times\mississauga-ca\settings.json
+  reminders\mississauga-ca\settings.json
+  tools\
+    questions-and-answers\mississauga-ca\settings.json
+    pull\settings.json
+    pull\news\mississauga-ca\settings.json, result.json
+    pull\dates\mississauga-ca\settings.json, result.json
+    search\settings.json
+  backups\
+```
+
+| File | What it holds |
+|---|---|
+| `%LOCALAPPDATA%\MiniCloClo\settings.json` | How the widget looks and behaves: size, avatar and outfit, motion, window position, always on top, sleep; voice and speech (hold to talk, Arabic, speed, greeting, hourly time); keyboard shortcuts |
+| `%LOCALAPPDATA%\MiniCloClo\location.json` | The place in use: `City`, `Latitude`, `Longitude`, `LocationTimeZoneId` |
+| `%LOCALAPPDATA%\MiniCloClo\prayer-times\<place>\settings.json` | Prayer times for that place: calculation and Asr method, azan on/off and sound, announcements, the reminder before each prayer, the prayer look |
+| `%LOCALAPPDATA%\MiniCloClo\reminders\<place>\settings.json` | Your custom and medicine reminders for that place |
+| `%LOCALAPPDATA%\MiniCloClo\tools\questions-and-answers\<place>\settings.json` | Your topics and answers for that place (Islamic dates, its public holidays, your notes, the dates a pull brought in) |
+| `%LOCALAPPDATA%\MiniCloClo\tools\pull\settings.json` | Pull commands on or off (the same in every place) |
+| `%LOCALAPPDATA%\MiniCloClo\tools\pull\<tool>\<place>\settings.json` | That pull tool's options for that place (news feeds, holidays country...) |
+| `%LOCALAPPDATA%\MiniCloClo\tools\pull\<tool>\<place>\result.json` | What that tool's last pull brought |
+| `%LOCALAPPDATA%\MiniCloClo\tools\search\settings.json` | Search on/off and how many results are read |
+| `%LOCALAPPDATA%\MiniCloClo\contacts.json` | Contacts (names and numbers, in plain text) and the paired phone |
+| `%LOCALAPPDATA%\MiniCloClo\quran-progress.json` | Quran memorization progress |
+| `%LOCALAPPDATA%\MiniCloClo\medicine-log.json` | The medicine log (30 days) |
+| `%LOCALAPPDATA%\MiniCloClo\learned-phrases.json` | Learned mishearings (text only) |
+| `%LOCALAPPDATA%\MiniCloClo\errors.log` | Error log (exception types only, no text you said or typed) |
+| `%LOCALAPPDATA%\MiniCloClo\backups\` | Copies kept when the settings were reorganized, e.g. `settings-2026-10-24-before-medicine.json` |
+
+**Settings per place.** `<place>` is the city and its country, e.g.
+`mississauga-ca`, `london-gb` (typed-in coordinates without a name use the
+coordinates). Each settings file in a place folder starts with the place it
+belongs to:
+
+```json
+"Location": { "City": "Mississauga", "Latitude": 43.59, "Longitude": -79.64, "LocationTimeZoneId": "Eastern Standard Time" }
+```
+
+When you change the city (*Prayer times and azan…*), a place you've used
+before brings back its own prayer times, reminders, questions and pull tool
+options — Keeper says so — and a new place starts from the ones you had; the
+old place's folders stay as they were. Look, voice, shortcuts, contacts,
+search, pull on/off, Quran progress, the medicine log and learned phrases are
+the same everywhere. A pull tool's folder appears the first time you set its
+options or pull with it, and is kept when you turn it off.
+
+Until 1.10 everything was in one `settings.json`; the first time the new
+version starts it is moved into these files and folders, and the old file is
+kept in `backups` (`settings-<date>-before-split.json`). Files from an
+in-between build (`prayer-times_<place>.json`, `pull-tools_<place>.json`,
+`search.json`, the `pull` results folder) are moved into the folders too, a
+copy kept in `backups\settings-<date>-before-folders`. `quran.json` is
+renamed `quran-progress.json`.
 
 All of it is in `%LOCALAPPDATA%\MiniCloClo` — paste that into File
 Explorer's address bar to open it. Nothing else is written: audio from the
@@ -632,6 +687,10 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--settings-test <file>` splits an old one-file `settings.json` into the named
+  files and folders, moves to London and back to Mississauga, checks each
+  place's settings come back, and moves an in-between build's flat files into
+  their folders, in a throwaway folder.
 - `--learn-test <file>` learns a mishearing on a real (muted) widget — offered,
   learned, used, forgotten — and checks what is never learned and the limit.
 - `--ocr-test <file>` shows a picture of English, then Arabic, text and

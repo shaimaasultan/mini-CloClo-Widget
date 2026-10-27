@@ -50,7 +50,6 @@ internal static class PullTools
     // Debug tests point this at a folder of test tools.
     internal static string? FolderOverride;
     internal static string ToolsFolder => FolderOverride ?? Path.Combine(AppContext.BaseDirectory, "pull");
-    private static string WorkFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MiniCloClo", "pull");
 
     // tool.json as written by hand.
     private sealed class ToolFile
@@ -137,13 +136,30 @@ internal static class PullTools
     // file to write. The settings file also says the voice commands'
     // language ("en" or "ar") and Mini CloClo's place, so a tool can fetch
     // in that language and for that country. Returns the result file's
-    // path when it finished well.
-    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, bool arabic = false,
+    // path when it finished well. Both are in the tool's folder for the
+    // place (placeKey): tools\pull\<tool>\<place>\, where result.json keeps
+    // the last result and the settings file for the script is removed after
+    // the run (the person's options are in settings.json beside it).
+    internal static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, string placeKey, bool arabic = false,
         Place? place = null, CancellationToken cancel = default)
     {
-        Directory.CreateDirectory(WorkFolder);
-        var settingsFile = Path.Combine(WorkFolder, tool.Id + ".settings.json");
-        var resultFile = Path.Combine(WorkFolder, tool.Id + ".result.json");
+        var folder = WidgetSettings.PullToolFolder(tool.Id, placeKey);
+        Directory.CreateDirectory(folder);
+        var settingsFile = Path.Combine(folder, "run-settings.json");
+        var resultFile = Path.Combine(folder, "result.json");
+        try
+        {
+            return await RunAsync(tool, settings, arabic, place, settingsFile, resultFile, cancel);
+        }
+        finally
+        {
+            try { File.Delete(settingsFile); } catch (IOException) { /* removed next run */ }
+        }
+    }
+
+    private static async Task<(Outcome Outcome, string? ResultFile)> RunAsync(PullTool tool, Dictionary<string, string> settings, bool arabic,
+        Place? place, string settingsFile, string resultFile, CancellationToken cancel)
+    {
         File.WriteAllText(settingsFile, JsonSerializer.Serialize(new
         {
             language = arabic ? "ar" : "en",

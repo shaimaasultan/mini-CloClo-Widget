@@ -8,7 +8,7 @@ namespace MiniCloClo;
 
 // Quran memorization progress: the ayah or run of ayat being learnt, the ayat marked as
 // memorized, the reciter folder and the repeat and reminder choices. Kept in
-// its own file beside settings.json and written the same way (a fresh
+// its own file, quran-progress.json, beside the settings and written the same way (a fresh
 // temporary file, then swapped in). Everything read back is checked, since
 // any program running as this user can edit the file.
 public sealed class QuranStore
@@ -43,7 +43,21 @@ public sealed class QuranStore
     // they can never overwrite the person's own. The app never sets it.
     internal static string? FolderOverride { get; set; }
 
-    private static string FilePath => Path.Combine(FolderPath, "quran.json");
+    private static string FilePath
+    {
+        get
+        {
+            // quran.json until #45: renamed once.
+            var path = Path.Combine(FolderPath, "quran-progress.json");
+            var old = Path.Combine(FolderPath, "quran.json");
+            try
+            {
+                if (!File.Exists(path) && File.Exists(old)) File.Move(old, path);
+            }
+            catch (IOException) { }
+            return path;
+        }
+    }
 
     public bool IsMemorized(int surah, int ayah) => Memorized.Contains(QuranText.GlobalIndex(surah, ayah));
 
