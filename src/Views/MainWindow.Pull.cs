@@ -69,6 +69,7 @@ public partial class MainWindow
     {
         _pendingCall = null;
         _pendingPull = tool;
+        if (heard == null) Succeeded($"pull {Said(tool)}", $"اسحب {SaidArabic(tool)}");
         _pendingPullUntil = DateTime.UtcNow + PullConfirmTime;
         ShowLabel($"Pull {Said(tool)}?", heard != null ? $"Heard: {heard} — say yes, or cancel" : $"Goes online to {tool.Description} — say yes, or cancel",
             "⬇", seconds: (int)PullConfirmTime.TotalSeconds);

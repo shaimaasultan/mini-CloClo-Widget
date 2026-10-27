@@ -806,6 +806,7 @@ public partial class MainWindow : Window
         menu.Items.Add(Item("Choose a surah by voice…", StartChooseSurah));
         menu.Items.Add(Item("Custom _reminders…", OpenCustomReminders, icon: ""));
         menu.Items.Add(Item("_Contacts and calls…", OpenContacts, icon: ""));
+        menu.Items.Add(Item("_Learned phrases…", OpenLearnedPhrases, icon: ""));
         menu.Items.Add(Item("_Questions and answers…", OpenTopics, icon: ""));
         menu.Items.Add(Item("P_ull tools…", OpenPullTools, icon: "\uE896"));
         menu.Items.Add(SubMenu("Searc_h YouTube and Spotify", "", new object[]

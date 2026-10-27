@@ -101,6 +101,10 @@ it carries its own runtime.
   it and keeps your settings, reminders, contacts and Quran progress.
 - **To remove it**: `scripts\Uninstall-MiniCloClo.cmd` (your settings are kept;
   `uninstall.ps1 -RemoveSettings` removes them too).
+- **Where your settings are:** `%LOCALAPPDATA%\MiniCloClo` — the local folder,
+  which Windows never copies anywhere. Versions before 1.10 kept them in
+  `%APPDATA%\MiniCloClo`; the installer (and the app, at startup) moves them
+  across once, keeping any file already in the new folder.
 
 **Quran recitations:** Mishary Alafasy's recitation of **Al-Fatiha and
 Al-Baqara** (293 ayat, 57 MB, stored with Git LFS) comes with the project in
@@ -158,6 +162,7 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Again / قولها تاني | Says the last answer to your own question again |
 | Did I take my medicine? / خدت الدوا؟ | Reads the medicine log: each dose today, taken (when) or missed |
 | What topics do I have? / مواضيعي | Lists your topics |
+| Forget that / انسى ده | Forgets the learned phrase just used ([Learning your mishearings](#learning-your-mishearings)) |
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
 | Search / ابحث (or "search YouTube", "ابحث في سبوتيفاي") | Searches YouTube or Spotify, reads the top results and plays the one you choose ([Search and play](#search-and-play)) — off until turned on |
@@ -175,6 +180,29 @@ window), which mishears less; on the processor it is decoded the quick way,
 so it still answers within a few seconds. When a command isn't understood, the label under the
 icons shows **"Heard: …"** — what the recognizer wrote — which helps tell a
 noisy microphone from a misheard word.
+
+### Learning your mishearings
+
+The speech model tends to mishear the same words the same way for one voice
+("Paul dates" for "pull dates", "أسكوط" for "اسكت"). When a command isn't
+understood and, within 30 seconds, the next one works, Keeper asks: *"Shall I
+remember what you said before as another way to say the time? Say yes, or
+no."* — it names only the command; the label shows *Heard: … → the time*.
+Say **"yes"** / **"نعم"** and next time those same words simply do that
+command; **"no"**, or another command, and nothing is kept.
+
+- **What can be learned:** the built-in commands (the time, the Quran, read…),
+  opening an app, your own question words, pull tools and "call …" (a call
+  still asks "yes" before dialing). **Never** "cancel", "stop", "yes", "no" or
+  shutting down.
+- **Learned words are checked after every exact command**, before the
+  sound-alike guesses, so a built-in phrase always means what it says.
+- **"Forget that"** / **"انسى ده"** right after a learned phrase was used
+  removes it; menu → **Learned phrases…** lists them all (*misheard → command*)
+  with **Remove** and **Remove all**.
+- **Only text is kept** — what was misheard, what worked and the command's
+  name; never audio — in `%LOCALAPPDATA%\MiniCloClo\learned-phrases.json`, at most
+  200 (the least recently used go first).
 
 ## Keyboard
 
@@ -471,7 +499,7 @@ Spotify) — not any program that claims the `spotify:` address.
   the time runs out the dose is logged as **missed**. Ask **"Did I take my
   medicine?"** (or "…this morning?", "When did I last take my medicine?",
   "خدت الدوا؟") to hear the log. It's kept 30 days in
-  `%APPDATA%\MiniCloClo\medicine-log.json`, on this PC only. Answering
+  `%LOCALAPPDATA%\MiniCloClo\medicine-log.json`, on this PC only. Answering
   stops a Quran recitation only for that moment: it carries on from the same
   ayah after Keeper's reply.
 
@@ -558,13 +586,16 @@ hidden, it keeps working and its shortcuts too.
 ## Where things are kept
 
 - Settings, reminders, contacts (names and numbers, in plain text) and your
-  questions and answers: `%APPDATA%\MiniCloClo\settings.json`
-- Quran progress: `%APPDATA%\MiniCloClo\quran.json`
+  questions and answers: `%LOCALAPPDATA%\MiniCloClo\settings.json`
+- Quran progress: `%LOCALAPPDATA%\MiniCloClo\quran.json`
+- Medicine log (30 days): `%LOCALAPPDATA%\MiniCloClo\medicine-log.json`
+- Learned phrases (text only): `%LOCALAPPDATA%\MiniCloClo\learned-phrases.json`
 - Error log (exception types only, no text you said or typed):
   `%LOCALAPPDATA%\MiniCloClo\errors.log`
 
-Nothing else is written: audio from the microphone stays in memory and is
-dropped after each command.
+All of it is in `%LOCALAPPDATA%\MiniCloClo` — paste that into File
+Explorer's address bar to open it. Nothing else is written: audio from the
+microphone stays in memory and is dropped after each command.
 
 ## Project layout
 
@@ -601,6 +632,8 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--learn-test <file>` learns a mishearing on a real (muted) widget — offered,
+  learned, used, forgotten — and checks what is never learned and the limit.
 - `--ocr-test <file>` shows a picture of English, then Arabic, text and
   reads it back with text recognition.
 - `--selection-test <file> [copy]` reads the text selected in the active app

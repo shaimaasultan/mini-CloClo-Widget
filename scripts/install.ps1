@@ -60,6 +60,21 @@ New-Item -ItemType Directory -Force -Path $target | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "Copying the files failed (robocopy exited with $LASTEXITCODE)." }
 $exe = Join-Path $target $exeName
 
+# Settings, Quran progress, the medicine log and learned phrases live in
+# %LOCALAPPDATA%\MiniCloClo; versions before 1.10 kept them in %APPDATA%.
+# Moved once (the app does the same at startup); a file already there is kept.
+$data = Join-Path $env:LOCALAPPDATA 'MiniCloClo'
+$oldData = Join-Path $env:APPDATA 'MiniCloClo'
+if (Test-Path -LiteralPath $oldData) {
+    Write-Host "Moving your settings to $data..."
+    New-Item -ItemType Directory -Force -Path $data | Out-Null
+    foreach ($file in Get-ChildItem -LiteralPath $oldData -File) {
+        $moved = Join-Path $data $file.Name
+        if (-not (Test-Path -LiteralPath $moved)) { Move-Item -LiteralPath $file.FullName -Destination $moved }
+    }
+    if (-not (Get-ChildItem -LiteralPath $oldData -Force)) { Remove-Item -LiteralPath $oldData }
+}
+
 Write-Host 'Adding shortcuts (Ctrl+Alt+C opens Mini CloClo)...'
 $shell = New-Object -ComObject WScript.Shell
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'Mini CloClo.lnk'

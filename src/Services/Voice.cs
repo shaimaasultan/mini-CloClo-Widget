@@ -17,6 +17,8 @@ public static class Voice
     // Silences everything said through here - for tools that open the app's
     // windows to take screenshots (tools\PromoVideo). The app never sets it.
     public static bool Muted { get; set; }
+    // What would have been said while muted (debug tests).
+    internal static Action<string>? Said;
 
     public static void Configure(Func<bool> preferArabic, double rate)
     {
@@ -31,7 +33,11 @@ public static class Voice
 
     public static void Say(string english, string? arabic = null, Action? onStarted = null)
     {
-        if (Muted) return;
+        if (Muted)
+        {
+            Said?.Invoke(Pick(english, arabic));
+            return;
+        }
         var text = Pick(english, arabic);
         Start(Sentences(text), onStarted);
     }

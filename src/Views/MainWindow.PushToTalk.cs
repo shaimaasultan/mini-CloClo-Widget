@@ -215,6 +215,18 @@ public partial class MainWindow
             await SpeakPushToTalkStepAsync("I didn't hear a command.", "ما سمعتش أمر.");
             return;
         }
+        _succeeded = null;
+        _commandFailed = false;
+        await HandleHeardAsync(heard, english);
+        AfterCommand(heard);
+    }
+
+    // What was heard, as a command or an answer. A learned mishearing (#37)
+    // is handled once more as what it stands for ("replayed").
+    private async Task HandleHeardAsync(string heard, string? english, bool replayed = false)
+    {
+        // "Yes" / "no" to "Shall I remember ...?" (#37).
+        if (!replayed && TryAnswerLearnQuestion(heard)) return;
         // "Yes" to a "call Mom?" question.
         if (!_shutdownAwaitingClose && TryConfirmPendingCall(heard)) return;
         // "Yes" to a "pull dates?" question.
@@ -260,6 +272,12 @@ public partial class MainWindow
             await StartShutdownAsync();
             return;
         }
+        // "Forget that": the learned phrase just used is forgotten (#37).
+        if (LearnedPhrases.IsForget(heard))
+        {
+            ForgetLastLearned();
+            return;
+        }
         // The person's own questions first: their words can't be built-in
         // commands (saving refuses them), so nothing is taken from those.
         if (TryAnswerTopic(heard, loose: false)) return;
@@ -274,6 +292,7 @@ public partial class MainWindow
             // "A surah" may be "Ashura": an own word that sounds the same wins.
             if (command == WidgetVoiceCommand.ChooseSurah && TryAnswerTopic(heard, loose: true, sameSound: true)) return;
             Keeper.SetVoiceStatus("complete");
+            SucceededWith(command);
             RunWidgetCommand(command, heard);
             return;
         }
@@ -283,15 +302,25 @@ public partial class MainWindow
             // ask again rather than treat it as some other command.
             if (await AskAgainForPendingCallAsync(heard)) return;
             if (AskAgainForPendingPull(heard)) return;
+            // A mishearing learned before: what it stands for (#37) - after
+            // every exact phrase, before the sound-alike guesses.
+            if (!replayed && LearnedPhrases.Find(heard) is { } learned)
+            {
+                UsedLearned(learned);
+                await HandleHeardAsync(learned.Replay, null, replayed: true);
+                return;
+            }
             // An action word one or two sounds off ("Ramadhan").
             if (TryAnswerTopic(heard, loose: true)) return;
             if (WidgetVoiceCommands.TryMatchLoosely(heard, out var looseCommand))
             {
                 Keeper.SetVoiceStatus("complete");
+                SucceededWith(looseCommand);
                 RunWidgetCommand(looseCommand, heard);
                 return;
             }
             Keeper.SetVoiceStatus("failed");
+            _commandFailed = true;
             ShowLabel("Not a command I know", $"Heard: {heard}", "🎤");
             await SpeakPushToTalkStepAsync("Sorry, that is not a command I know. Say help to hear the commands.",
                 "آسف، ده مش أمر أعرفه. قول مساعدة عشان تسمع الأوامر.");
@@ -305,6 +334,7 @@ public partial class MainWindow
         if (_closing) return;
         var error = ApprovedVoiceAppLauncher.Launch(app);
         Keeper.SetVoiceStatus(error == null ? "complete" : "failed");
+        if (error == null) Succeeded($"open {name}", $"افتح {arabicName}");
         ShowLabel(error ?? $"Opened {name}", "", "🎤");
         if (error != null)
             await SpeakPushToTalkStepAsync($"Could not open {name}.", $"تعذر فتح {arabicName}.");

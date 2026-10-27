@@ -150,6 +150,78 @@ internal static class Snapshot
     // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
     // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
     // is missed - and the log answers, in a throwaway folder.
+    // "MiniCloClo.exe --learn-test <report file>": learning mishearings (#37)
+    // on a real (unshown) widget, muted, in a throwaway folder - what is
+    // offered, learned, used and forgotten, and what is never learned.
+    public static int LearnTest(string reportPath)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        LearnedPhrases.FolderOverride = Path.Combine(Path.GetTempPath(), "MiniCloClo-learn-test");
+        if (Directory.Exists(LearnedPhrases.FolderOverride)) Directory.Delete(LearnedPhrases.FolderOverride, recursive: true);
+        Voice.Muted = true;
+        Voice.Said = said => lines.Add($"    Keeper: {said}");
+        var app = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+        app.Startup += async (_, _) =>
+        {
+            try
+            {
+                var widget = new MainWindow();
+                async Task Say(string heard)
+                {
+                    lines.Add($"person: \"{heard}\"");
+                    await widget.HeardForTest(heard);
+                    await Task.Delay(900); // the offer waits for the reply to be said
+                }
+                lines.Add("-- not understood, then it works: offered, and learned --");
+                await Say("Purple elephant sandwich.");
+                await Say("What time is it?");
+                await Say("Yes.");
+                lines.Add("-- the learned words now work, and can be forgotten --");
+                await Say("Purple elephant sandwich.");
+                await Say("Forget that.");
+                await Say("Purple elephant sandwich.");
+                lines.Add("-- \"no\" doesn't learn; another command drops the question --");
+                await Say("Purple elephant sandwich.");
+                await Say("What's the date?");
+                await Say("No.");
+                await Say("Purple elephant sandwich.");
+                await Say("What time is it?");
+                await Say("Help.");
+                lines.Add("-- never learned: an answer word after a failure --");
+                await Say("Purple elephant sandwich.");
+                await Say("Cancel.");
+                lines.Add($"learned now: {string.Join(", ", LearnedPhrases.Load().Select(p => $"{p.Heard} -> {p.Name}"))}");
+                lines.Add("-- what can be learned --");
+                foreach (var (failed, worked) in new[]
+                         {
+                             ("Paul dates.", "Pull dates."), ("أسكوط", "اسكت"), ("Cancel.", "What time is it?"), ("Yes.", "Call Mom."),
+                             ("No.", "Quran."), ("Shut down.", "Help."), ("one two three four five six seven", "Quran."), ("Quran.", "Quran."),
+                         })
+                    lines.Add($"\"{failed}\" for \"{worked}\" -> {LearnedPhrases.CanLearn(failed, worked)}");
+                foreach (var heard in new[] { "Forget that.", "انسى ده", "Forget it.", "Forget the date." })
+                    lines.Add($"\"{heard}\" -> forget {LearnedPhrases.IsForget(heard)}");
+                lines.Add("-- at most 200, the least recently used go first --");
+                for (var i = 0; i < 205; i++) LearnedPhrases.Add($"word {i}", "What time is it?", "the time", "الساعة", DateTime.Now.AddMinutes(i));
+                var kept = LearnedPhrases.Load();
+                lines.Add($"kept {kept.Count}; oldest kept: {kept.MinBy(p => p.LastUsed)?.Heard}");
+                lines.Add($"file: {Path.GetFileName(Path.Combine(LearnedPhrases.FolderOverride!, "learned-phrases.json"))}, has audio: {File.ReadAllText(Path.Combine(LearnedPhrases.FolderOverride!, "learned-phrases.json")).Contains(".wav")}");
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                LearnedPhrases.FolderOverride = null;
+                Voice.Said = null;
+            }
+            File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+            app.Shutdown();
+        };
+        app.Run();
+        return 0;
+    }
+
     // "MiniCloClo.exe --ocr-test <report file>": shows a picture of English,
     // then Arabic, text in a window and reads it back with text recognition.
     public static int OcrTest(string reportPath)

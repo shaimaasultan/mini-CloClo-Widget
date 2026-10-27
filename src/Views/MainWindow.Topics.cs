@@ -76,6 +76,7 @@ public partial class MainWindow
                 break;
             }
         }
+        if (_lastAnswer is { } answered) Succeeded(answered.Title, answered.Title);
         return true;
     }
 }

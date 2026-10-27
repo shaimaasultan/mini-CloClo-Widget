@@ -56,6 +56,7 @@ public partial class MainWindow
         }
         _pendingCall = contact;
         _pendingCallUntil = DateTime.UtcNow + CallConfirmTime;
+        Succeeded($"call {contact.Name}", $"اتصل ب{contact.OtherName ?? contact.Name}");
         Keeper.SetVoiceStatus("complete");
         ShowLabel($"Call {contact.Name}?", $"{contact.Number} — say yes, or cancel", "📞", seconds: (int)CallConfirmTime.TotalSeconds);
         await SpeakPushToTalkStepAsync(

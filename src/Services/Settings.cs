@@ -92,8 +92,35 @@ public class WidgetSettings
 
     public static double RoundCoordinate(double value) => Math.Round(value, 2);
 
+    // Everything Mini CloClo keeps - settings, Quran progress, the medicine
+    // log, learned phrases - is in %LOCALAPPDATA%\MiniCloClo: the local
+    // folder, never copied anywhere (a domain's roaming profile copies
+    // %APPDATA% to its server at sign-out).
     internal static string FolderPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MiniCloClo");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MiniCloClo");
+
+    // Before 1.10 it was in %APPDATA%\MiniCloClo: moved here once, at
+    // startup. A file already here is kept, and its old copy left where it
+    // was; the old folder goes once it's empty.
+    internal static void MoveFromRoaming()
+    {
+        try
+        {
+            var old = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MiniCloClo");
+            if (!Directory.Exists(old)) return;
+            Directory.CreateDirectory(FolderPath);
+            foreach (var file in Directory.GetFiles(old))
+            {
+                var moved = Path.Combine(FolderPath, Path.GetFileName(file));
+                if (!File.Exists(moved)) File.Move(file, moved);
+            }
+            if (!Directory.EnumerateFileSystemEntries(old).Any()) Directory.Delete(old);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Tried again at the next start.
+        }
+    }
 
     private static string FilePath => Path.Combine(FolderPath, "settings.json");
 
