@@ -14,13 +14,30 @@ can't see the screen well. It keeps only:
   Holiday?": Islamic dates worked out on the PC, holidays and your own notes.
 - **Pull** — "pull dates", "pull news": fresh dates or headlines, after "yes"
   (off until turned on).
-- **Read aloud** — select text in any app and click 🔊, or point at a picture:
-  read in Arabic or English, on your PC.
+- **Read aloud** — say "read": the text you selected in any app, or the text
+  in a picture under the mouse, read in Arabic or English, on your PC.
 - **Search and play** — "search YouTube", "search Spotify": the top results
   read aloud, and the one you choose played (off until turned on).
 - **The avatar**, which changes with what's happening (prayer clothes, reading
   the Quran, reminder cardigan, pyjamas when asleep, a listening badge).
 - **The time and date** — large, plus the Hijri date and the next prayer.
+
+### What's new
+
+- **[1.9](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.9.0)** — **"read" reads pictures too**: with nothing
+  selected, the text in the picture under the mouse (a scanned letter, a
+  medicine box, a screenshot); **"read the screen"** / **"اقرا الشاشة"** reads
+  the whole window — Windows' own text recognition, offline, Arabic or
+  English. Just **"read"** / **"اقرا"** is enough. ([Read aloud](#read-aloud))
+- **[1.8](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.8.0)** — **read the selected text aloud**: the 🔊 icon,
+  Ctrl+Alt+L or "read this".
+- **[1.7](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.7.0)** — each keyboard shortcut can be turned **on or off
+  on its own**; no more Windows Security popup when searching Spotify.
+- **[1.6](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.6.0)** — **search and play** on YouTube or Spotify by voice;
+  new promo videos.
+- **[1.5](https://github.com/shaimaasultan/mini-CloClo-Widget/releases/tag/v1.5.0)** — reminders **on the clock** that wait their turn;
+  **medicine reminders** that wait for "yes"; the next time beside each
+  reminder.
 
 ## Watch it
 
