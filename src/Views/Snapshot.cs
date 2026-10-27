@@ -150,6 +150,37 @@ internal static class Snapshot
     // "MiniCloClo.exe --medicine-test <report file>": medicine reminders
     // (#29) on a fake clock - asked until "yes", "later" snoozes, unanswered
     // is missed - and the log answers, in a throwaway folder.
+    // "MiniCloClo.exe --selection-test <report file> [copy]": reads the text
+    // selected in the active app (UI Automation, or with "copy" by copying
+    // it alone) and checks the clipboard is put back.
+    public static int SelectionTest(string reportPath, bool copyOnly)
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        SelectedText.Trace = note => lines.Add($"  {note}");
+        SelectedText.SkipAutomation = copyOnly;
+        var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText("clipboard before the test");
+                var window = SelectedText.TargetWindow(out var active);
+                lines.Add($"window found: {window != IntPtr.Zero}, active: {active}");
+                var text = await SelectedText.ReadAsync(window, active);
+                lines.Add($"text: [{text ?? "-"}]");
+                lines.Add($"clipboard after: [{(System.Windows.Clipboard.ContainsText() ? System.Windows.Clipboard.GetText() : "-")}]");
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{ex.GetType().Name}: {ex.Message}");
+            }
+            File.WriteAllLines(reportPath, lines, System.Text.Encoding.UTF8);
+            dispatcher.InvokeShutdown();
+        });
+        System.Windows.Threading.Dispatcher.Run();
+        return 0;
+    }
+
     public static int SearchTest(string reportPath)
     {
         var lines = new System.Collections.Generic.List<string> { "-- search commands --" };

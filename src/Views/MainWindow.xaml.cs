@@ -60,10 +60,11 @@ public partial class MainWindow : Window
     // KeeperView draws on a 150x292 stage scaled by 1.3 and the widget size;
     // these rects are in stage units (see KeeperView.xaml).
     private const double StageScale = 1.3;
-    private static readonly Rect PrayerIconRect = new(24.5, 230, 24, 22);
-    private static readonly Rect QuranIconRect = new(51.5, 230, 24, 22);
-    private static readonly Rect RemindersIconRect = new(78.5, 230, 24, 22);
-    private static readonly Rect MicIconRect = new(105.5, 230, 24, 22);
+    private static readonly Rect PrayerIconRect = new(11, 230, 24, 22);
+    private static readonly Rect QuranIconRect = new(38, 230, 24, 22);
+    private static readonly Rect RemindersIconRect = new(65, 230, 24, 22);
+    private static readonly Rect MicIconRect = new(92, 230, 24, 22);
+    private static readonly Rect ReadIconRect = new(119, 230, 24, 22);
     private static readonly Rect CloseLabelRect = new(124, 255, 24, 22);
     private static readonly Rect LabelRect = new(3, 255, 144, 36);
     // At prayer time the check badge beside the head, and the head itself,
@@ -96,6 +97,7 @@ public partial class MainWindow : Window
             // decoded finishes with it).
             LocalAudioTranscriber.UnloadModel();
             UnregisterHotkeys();
+            SelectedText.StopTracking();
             Keeper.SetVoiceStatus("off");
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             SaveWindowPosition();
@@ -131,6 +133,7 @@ public partial class MainWindow : Window
         SetupTrayIcon();
         UpdatePushToTalkHook();
         UpdateHotkeys();
+        SelectedText.StartTracking();
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         Topmost = _settings.AlwaysOnTop;
@@ -252,10 +255,10 @@ public partial class MainWindow : Window
         var talkArabic = _settings.PushToTalkEnabled ? "دوس كليك يمين مطول في أي مكان" : "دوس كنترول ألت V";
         ShowLabel("Help", "Say: time, date, next prayer, Quran, reminders, stop", "❔");
         Voice.Say($"{talk}, wait for the short chime, then say a command: what time is it, the date, next prayer, prayer times, " +
-                  "Quran, Quran surah, next, previous, reminders, call and a name, your own questions like Ramadan date, say it again, what topics do I have, pull dates, search YouTube, pause the song, next song, did I take my medicine, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
+                  "Quran, Quran surah, next, previous, reminders, call and a name, your own questions like Ramadan date, say it again, what topics do I have, pull dates, search YouTube, read this, pause the song, next song, did I take my medicine, stop, I prayed, help, or open Notepad, Word, Calculator, Narrator, Magnifier or Settings, " +
                   "or shut down." + keys,
             $"{talkArabic}، استنى صوت التنبيه القصير، وبعدين قول أمر: الساعة كام، التاريخ، الصلاة الجاية، مواقيت الصلاة، " +
-            "القرآن، القرآن سورة، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، أسئلتك زي تاريخ رمضان، قولها تاني، مواضيعي، اسحب التواريخ، ابحث في يوتيوب، وقف الأغنية، الأغنية الجاية، خدت الدوا، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
+            "القرآن، القرآن سورة، اللي بعده، اللي قبله، التذكيرات، اتصل باسم، أسئلتك زي تاريخ رمضان، قولها تاني، مواضيعي، اسحب التواريخ، ابحث في يوتيوب، اقرا ده، وقف الأغنية، الأغنية الجاية، خدت الدوا، اسكت، صليت، مساعدة، أو افتح المفكرة، وورد، الآلة الحاسبة، الراوي، المكبر أو الإعدادات، " +
             "أو اقفل الجهاز." + keysArabic);
     }
 
@@ -710,6 +713,7 @@ public partial class MainWindow : Window
         if (QuranIconRect.Contains(p)) { OpenQuran(); return; }
         if (RemindersIconRect.Contains(p)) { OpenCustomReminders(); return; }
         if (MicIconRect.Contains(p)) { ToggleKeyboardVoiceCommand(); return; }
+        if (ReadIconRect.Contains(p)) { ReadSelection(); return; }
         if (CloseLabelRect.Contains(p)) { HideLabel(); return; }
 
         // Dragging moves the widget; a click that doesn't move it says the
@@ -793,6 +797,7 @@ public partial class MainWindow : Window
         menu.Items.Add(Item("Say the _next prayer", SayNextPrayer, icon: ""));
         menu.Items.Add(Item("Say _all of today's prayer times", SayPrayerTimes));
         menu.Items.Add(Item("Talk to CloClo (_voice command)", ToggleKeyboardVoiceCommand, icon: ""));
+        menu.Items.Add(Item("_Read the selected text aloud", ReadSelection, icon: "\uE767"));
         menu.Items.Add(Item("_Stop sounds", () => { if (!StopSounds()) Voice.Say("Nothing is playing.", "مفيش حاجة شغالة."); }, icon: ""));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("_Prayer times and azan…", OpenPrayerTimes, icon: ""));

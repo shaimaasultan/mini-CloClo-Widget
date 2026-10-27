@@ -14,6 +14,8 @@ can't see the screen well. It keeps only:
   Holiday?": Islamic dates worked out on the PC, holidays and your own notes.
 - **Pull** — "pull dates", "pull news": fresh dates or headlines, after "yes"
   (off until turned on).
+- **Read aloud** — select text in any app and click 🔊: read in Arabic or
+  English, on your PC.
 - **Search and play** — "search YouTube", "search Spotify": the top results
   read aloud, and the one you choose played (off until turned on).
 - **The avatar**, which changes with what's happening (prayer clothes, reading
@@ -142,6 +144,7 @@ recitation, the azan or speech that is playing, so "stop", "next" and
 | Pull dates / اسحب التواريخ | Downloads fresh dates into your questions, after "yes" ([Pull](#pull)) — off until turned on |
 | Pull news / اسحب الأخبار | Reads the latest headlines aloud, after "yes" ([Pull](#pull)) |
 | Search / ابحث (or "search YouTube", "ابحث في سبوتيفاي") | Searches YouTube or Spotify, reads the top results and plays the one you choose ([Search and play](#search-and-play)) — off until turned on |
+| Read this / اقرا ده (or "read the selection", "اقرا الكلام المتحدد") | Reads the text selected in any app aloud ([Read aloud](#read-aloud)) |
 | Pause the song, resume, next song, previous song / وقف الأغنية، كمل الأغنية، الأغنية الجاية، الأغنية اللي فاتت | Controls what Spotify or a video plays now |
 | Open Notepad, Word, Calculator, Narrator, Magnifier, Settings | Opens that app |
 | Shut down / اقفل الجهاز | Shuts the PC down, after asking about open apps ("cancel" stops it) |
@@ -171,6 +174,7 @@ noisy microphone from a misheard word.
 | **I** | Questions and answers |
 | **Y** | Medicine taken (answers "Did you take it?") |
 | **V** | Talk (press again when done) |
+| **L** | Read the selected text aloud |
 | **S** | Stop sounds |
 | **M** | The menu (opens with the keyboard in it) |
 | **H** | Help |
@@ -320,6 +324,29 @@ writes a list of topics (the same file *Import…* reads); a `read` tool
 writes `{ "title": "...", "items": [ { "text": "...", "otherText": "..." } ] }`
 (up to 10 items, read aloud in order).
 
+## Read aloud
+
+Select text in **any app** — a web page in Edge, an email, a Word document, a
+PDF, Notepad — then click the **🔊 icon** on the widget, press **Ctrl+Alt+L**,
+or say **"read this"** / **"اقرا ده"** (also in the menu: *Read the selected
+text aloud*). Keeper reads it aloud:
+
+- **Arabic or English, by itself:** Arabic with the Arabic voice (Hoda) and
+  English with the English one (David); a text with both is read with both,
+  whatever the voice-command language.
+- **"Stop"** stops it; **"again"** reads it once more; a reminder pauses it
+  and it carries on from the sentence it was on.
+- Up to about 20,000 characters (a select-all of a long document reads the
+  beginning). Nothing selected: Keeper says so.
+
+**Offline, on your PC only.** The text is taken the way Narrator does it —
+Windows UI Automation asks the app for its selection — and read by Windows'
+own voices. For an app that doesn't share its selection that way, Mini CloClo
+copies it (Ctrl+C) and puts back what the clipboard held; if Windows'
+clipboard history (Win+V) is on, that copy is kept in it. Clicking the widget
+makes it the active window, so it remembers the last app you used before it
+and reads from that one. Nothing is saved.
+
 ## Search and play
 
 Search **YouTube** or **Spotify** and play what you choose, without seeing
@@ -468,7 +495,8 @@ The time sits on top, large, with the sun by day and the moon at night: from
 sunrise and sunset in your city when it's in the PC's time zone, otherwise
 6 AM to 6 PM by the PC's clock. Below the avatar are the date, the Hijri date
 and the next prayer, each on a dark plate that reads on any wallpaper. Under
-them, four icons: 🕌 prayer times, 📗 Quran, ⏰ reminders, 🎤 talk, and a
+them, five icons: 🕌 prayer times, 📗 Quran, ⏰ reminders, 🎤 talk, 🔊 read the
+selected text aloud, and a
 label for messages — click it to hear it again, or its ✕ to close it. Click
 the head to hear the time; drag to move the widget; right-click or
 double-click for the menu. *Look → Size* makes it 1×, 1.5× (default) or 2× as
@@ -539,6 +567,9 @@ Debug builds have these test switches:
   answers, the Hijri dates, what is said, words that clash with commands —
   and, with a file, imports it into the window.
 - `--quran-test <file>` plays a whole surah and a range in the Quran window.
+- `--selection-test <file> [copy]` reads the text selected in the active app
+  (UI Automation, or with `copy` by copying it) and checks the clipboard is
+  put back.
 - `--search-test <file>` checks the search phrases, the app and number
   answers, the music controls, and reading results from saved YouTube links
   and Spotify buttons (offline).

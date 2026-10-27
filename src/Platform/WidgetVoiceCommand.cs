@@ -9,7 +9,7 @@ namespace MiniCloClo;
 // only these fixed phrases count (compared after the same cleanup, with the
 // wake name, "please" and "now" tolerated); the transcript is never used as
 // anything but a key into this table.
-internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain, MedicineLog }
+internal enum WidgetVoiceCommand { Time, Date, NextPrayer, PrayerTimes, Quran, ChooseSurah, QuranNext, QuranPrevious, Reminders, Help, StopSound, Prayed, SayAgain, MedicineLog, ReadSelection }
 
 internal static class WidgetVoiceCommands
 {
@@ -75,6 +75,13 @@ internal static class WidgetVoiceCommands
             "again", "say it again", "say that again", "say again", "date again", "the date again", "one more time",
             "repeat that", "repeat it", "repeat the date", "tell me again", "what was that", "pardon",
             "تاني", "قولها تاني", "قوله تاني", "قول تاني", "قولي تاني", "كمان مره", "مره كمان", "التاريخ تاني", "عيدها", "عيدها تاني",
+        ]),
+        // The text selected in another app, read aloud.
+        (WidgetVoiceCommand.ReadSelection, [
+            "read this", "read it", "read this out", "read it out loud", "read this aloud", "read the selection",
+            "read the selected text", "read selected text", "read what i selected", "read the text", "read aloud", "read out loud",
+            "اقرا ده", "اقرا دي", "اقراها", "اقراه", "اقرالي ده", "اقرالي", "اقرا المتحدد", "اقرا الكلام المتحدد", "اقرا اللي متحدد",
+            "اقرا الكلام ده", "اقرا النص", "اقرا بصوت عالي",
         ]),
         // The medicine log (#29).
         (WidgetVoiceCommand.MedicineLog, [

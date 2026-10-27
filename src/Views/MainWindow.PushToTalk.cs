@@ -330,6 +330,7 @@ public partial class MainWindow
             case WidgetVoiceCommand.Prayed: MarkPrayed(); break;
             case WidgetVoiceCommand.SayAgain: SayLastAnswerAgain(); break;
             case WidgetVoiceCommand.MedicineLog: SayMedicineLog(heard); break;
+            case WidgetVoiceCommand.ReadSelection: ReadSelection(); break;
         }
     }
 

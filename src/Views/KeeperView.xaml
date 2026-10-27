@@ -427,12 +427,13 @@
         </StackPanel>
 
         <!-- ===== icon bar — must stay in sync with MainWindow's IconRects ===== -->
-        <Border Canvas.Left="20" Canvas.Top="229" Width="110" Height="24" CornerRadius="7" Background="#C0141010" />
-        <StackPanel x:Name="MediaBar" Canvas.Left="20" Canvas.Top="230" Width="110" Height="22" Orientation="Horizontal">
+        <Border Canvas.Left="6.5" Canvas.Top="229" Width="137" Height="24" CornerRadius="7" Background="#C0141010" />
+        <StackPanel x:Name="MediaBar" Canvas.Left="6.5" Canvas.Top="230" Width="137" Height="22" Orientation="Horizontal">
             <Grid x:Name="IconPrayer" Style="{StaticResource MediaIcon}" Margin="4.5,0,1.5,0"><TextBlock Style="{StaticResource IconGlyph}" Text="🕌" /></Grid>
             <Grid x:Name="IconQuran" Style="{StaticResource MediaIcon}"><TextBlock Style="{StaticResource IconGlyph}" Text="📗" /></Grid>
             <Grid x:Name="IconReminders" Style="{StaticResource MediaIcon}"><TextBlock Style="{StaticResource IconGlyph}" Text="⏰" /></Grid>
             <Grid x:Name="IconMic" Style="{StaticResource MediaIcon}"><TextBlock x:Name="MicGlyph" Style="{StaticResource IconGlyph}" Text="🎤" /></Grid>
+            <Grid x:Name="IconRead" Style="{StaticResource MediaIcon}"><TextBlock Style="{StaticResource IconGlyph}" Text="🔊" /></Grid>
         </StackPanel>
 
         <!-- ===== the message label (reminders, prayer times, voice
