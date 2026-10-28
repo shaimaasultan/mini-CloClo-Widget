@@ -38,7 +38,7 @@
   Controlled folder access).
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File tools\Get-CalendarTopics.ps1 -Country CA -Region CA-ON
+  powershell -ExecutionPolicy Bypass -File tools\questions-and-answers\Get-CalendarTopics.ps1 -Country CA -Region CA-ON
 #>
 param(
     [string]$Country = '',

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace MiniCloClo;
 
-// "Pull" tools (#35): each is a folder in pull\ beside the app with its
+// "Pull" tools (#35): each is a folder in tools\pull\ beside the app with its
 // settings file (tool.json) and its script (run.ps1). Pulling runs the
 // script with two arguments only - a settings file and the result file to
 // write - then the result is imported into Questions and answers or read
@@ -49,7 +49,7 @@ internal static class PullTools
 
     // Debug tests point this at a folder of test tools.
     internal static string? FolderOverride;
-    internal static string ToolsFolder => FolderOverride ?? Path.Combine(AppContext.BaseDirectory, "pull");
+    internal static string ToolsFolder => FolderOverride ?? Path.Combine(AppContext.BaseDirectory, "tools", "pull");
 
     // tool.json as written by hand.
     private sealed class ToolFile

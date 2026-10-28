@@ -814,7 +814,7 @@ internal static class Snapshot
             lines.Add($"after import: shown topic {window.ShownTopic}, actions: {string.Join(" | ", window.ShownActions)}");
             foreach (var topic in window.Topics) lines.Add($"window topic: {topic.Name}: {string.Join(", ", topic.Actions.Select(a => $"{a.Word} [{a.Kind}, {a.Dates.Count}]"))}");
             window.Close();
-            // Read a file the way Import does (tools\Get-CalendarTopics.ps1).
+            // Read a file the way Import does (tools\questions-and-answers\Get-CalendarTopics.ps1).
             var imported = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<TopicSettings>>(File.ReadAllText(importFile)) ?? new();
             foreach (var topic in imported.Select(t => t?.ValidateAndNormalize()).Where(t => t != null).Cast<TopicSettings>())
             {

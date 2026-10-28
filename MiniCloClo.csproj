@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationManifest>config\app.manifest</ApplicationManifest>
+    <ApplicationManifest>src\config\app.manifest</ApplicationManifest>
     <AssemblyName>MiniCloClo</AssemblyName>
     <RootNamespace>MiniCloClo</RootNamespace>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
@@ -26,12 +26,12 @@
          folder for another program to plant a DLL in. -->
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <!-- tools\ holds separate projects (the promo video maker), not app code. -->
+    <!-- tools\ holds the pull tools, the calendar script and the promo video maker (a separate project), not app code. -->
     <!-- The bundled Whisper model (#36): its file in Assets\Models and its
          SHA-256, checked here at build time and again by PlaybackModelStore. -->
     <SpeechModelFile>ggml-large-v3-turbo-q5_0.bin</SpeechModelFile>
     <SpeechModelSha256>394221709CD5AD1F40C46E6031CA61BCE88931E6E088C188294C6D5A55FFA7E2</SpeechModelSha256>
-    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**;pull\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -67,13 +67,13 @@
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- Pull tools (#35): pull\<name>\tool.json and run.ps1, installed in a
-       pull folder beside the exe. The dates tool runs the calendar script
-       from tools\, copied in beside it. -->
+  <!-- Pull tools (#35): tools\pull\<name>\tool.json and run.ps1, installed
+       in tools\pull beside the exe. The dates tool runs the calendar script
+       from tools\questions-and-answers\, copied in beside it. -->
   <ItemGroup>
-    <Content Include="pull\**\*" Link="pull\%(RecursiveDir)%(Filename)%(Extension)"
+    <Content Include="tools\pull\**\*" Link="tools\pull\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="tools\Get-CalendarTopics.ps1" Link="pull\dates\Get-CalendarTopics.ps1"
+    <Content Include="tools\questions-and-answers\Get-CalendarTopics.ps1" Link="tools\pull\dates\Get-CalendarTopics.ps1"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

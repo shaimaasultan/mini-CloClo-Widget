@@ -312,7 +312,7 @@ name, "call …") can't be used. *Export…* / *Import…* share the list as a
 file; importing a topic with the same name replaces it.
 
 **Published dates from the internet** (optional, outside the app):
-double-click `tools\Get-CalendarTopics.cmd`, give your country (e.g. `CA`)
+double-click `tools\questions-and-answers\Get-CalendarTopics.cmd`, give your country (e.g. `CA`)
 and province (e.g. `CA-ON`), and it saves *CloClo calendar <year>.json* in
 your Downloads folder with this year's and next year's Islamic dates
 ([Aladhan](https://aladhan.com), the Saudi official calendar by default) and
@@ -360,12 +360,12 @@ online: menu → **Pull tools…** → *Allow pull commands (they go online)*. T
 same window sets each tool's settings.
 
 **Mini CloClo itself still never goes online.** It only starts a tool from
-the `pull` folder beside the app — never anything you said — after you say
+the `tools\pull` folder beside the app — never anything you said — after you say
 yes, and reads the file the tool writes. Its own network check and the
 firewall rules for `MiniCloClo.exe` are unchanged; the tools are separate
 PowerShell scripts.
 
-**Adding a tool** (later: news, trends…): a folder `pull\<name>\` with
+**Adding a tool** (later: news, trends…): a folder `tools\pull\<name>\` with
 `tool.json` — its spoken name (`name`, `otherName`), what it goes online for
 (`description`, `otherDescription`), `"result": "import"` or `"read"`,
 `timeoutSeconds`, and its `settings` with `settingLabels` — and `run.ps1`,
@@ -670,12 +670,15 @@ microphone stays in memory and is dropped after each command.
   the Bluetooth dialer, single instance, startup and shutdown.
 - `scripts/` — install, uninstall, recitation packing, the offline check and
   the firewall rules.
-- `tools/Get-CalendarTopics.ps1` (and `.cmd`) — downloads published Islamic
-  dates and public holidays into a file to import (the one part that goes
-  online, run by hand or by "pull dates").
-- `pull/` — the pull tools, installed beside the app: `pull/dates/` runs
-  the calendar script with the settings from *Pull tools…*.
-- `tools/PromoVideo/` — makes the promo videos, offline: scenes drawn with the
+- `src/config/` — the app manifest (DPI awareness, Windows versions).
+- `tools/questions-and-answers/Get-CalendarTopics.ps1` (and `.cmd`) —
+  downloads published Islamic dates and public holidays into a file to import
+  in Questions and answers (the one part that goes online, run by hand or by
+  "pull dates").
+- `tools/pull/` — the pull tools, installed beside the app in `tools\pull`:
+  `tools/pull/dates/` runs the calendar script with the settings from *Pull
+  tools…*, `tools/pull/news/` reads the headlines.
+- `tools/promo-video/` — makes the promo videos, offline: scenes drawn with the
   app's own avatar, narration by a Windows voice, encoded by Windows.
   `PromoVideo.exe <output.mp4>` for English, add `--arabic` for Arabic. It
   hides the account name the avatar shows on its shirt. The videos are in

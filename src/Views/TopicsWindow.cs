@@ -267,7 +267,7 @@ internal sealed class TopicsWindow : Window
         try
         {
             // A topic with the same name is replaced (fresh dates from
-            // tools\Get-CalendarTopics.ps1 replace "Islamic dates").
+            // tools\questions-and-answers\Get-CalendarTopics.ps1 replace "Islamic dates").
             var (added, replaced, _) = TopicImport.Merge(_topics, TopicImport.ReadFile(path));
             _topicList.SelectedIndex = _topics.Count > 0 ? 0 : -1;
             _status.Text = $"Imported: {added} new topics, {replaced} replaced. Choose Save and close to keep them.";

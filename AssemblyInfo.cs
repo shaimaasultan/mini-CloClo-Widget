@@ -6,7 +6,7 @@ using System.Windows;
 // app's own folder, where another program could place a look-alike.
 [assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 
-// tools\PromoVideo opens the app's windows to take the README screenshots.
+// tools\promo-video opens the app's windows to take the README screenshots.
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("PromoVideo")]
 
 [assembly:ThemeInfo(

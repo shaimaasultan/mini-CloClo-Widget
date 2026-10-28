@@ -59,7 +59,7 @@ public sealed class TopicAction
     // Hijri: month 1-12 and day 1-30.
     public int HijriMonth { get; set; } = 9;
     public int HijriDay { get; set; } = 1;
-    // Calendar dates of a Hijri event (from tools\Get-CalendarTopics.ps1):
+    // Calendar dates of a Hijri event (from tools\questions-and-answers\Get-CalendarTopics.ps1):
     // HijriMonth and HijriDay say which, so the answer names the Hijri date
     // the dates were published for, not the PC's own reckoning.
     public bool FromHijri { get; set; }

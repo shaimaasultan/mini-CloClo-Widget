@@ -15,7 +15,7 @@ public static class Voice
     private static Func<bool> _arabic = () => false;
 
     // Silences everything said through here - for tools that open the app's
-    // windows to take screenshots (tools\PromoVideo). The app never sets it.
+    // windows to take screenshots (tools\promo-video). The app never sets it.
     public static bool Muted { get; set; }
     // What would have been said while muted (debug tests).
     internal static Action<string>? Said;
