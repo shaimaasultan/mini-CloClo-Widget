@@ -312,8 +312,8 @@ name, "call …") can't be used. *Export…* / *Import…* share the list as a
 file; importing a topic with the same name replaces it.
 
 **Published dates from the internet** (optional, outside the app):
-double-click `tools\questions-and-answers\Get-CalendarTopics.cmd`, give your country (e.g. `CA`)
-and province (e.g. `CA-ON`), and it saves *CloClo calendar <year>.json* in
+double-click `tools\questions-and-answers\Get-CalendarTopics.cmd`, give
+your country (e.g. `CA`) and province (e.g. `CA-ON`), and it saves *CloClo calendar <year>.json* in
 your Downloads folder with this year's and next year's Islamic dates
 ([Aladhan](https://aladhan.com), the Saudi official calendar by default) and
 public holidays ([Nager.Date](https://date.nager.at)). Import it with
@@ -357,7 +357,9 @@ followed by a tool's name, counts.
 
 **Pull commands are off until you turn them on**, because the tools go
 online: menu → **Pull tools…** → *Allow pull commands (they go online)*. The
-same window sets each tool's settings.
+same window sets each tool's settings, kept for each city in
+`%LOCALAPPDATA%\MiniCloClo\tools\pull\<tool>\<place>\settings.json`, beside the
+`result.json` its last pull brought ([Where things are kept](#where-things-are-kept)).
 
 **Mini CloClo itself still never goes online.** It only starts a tool from
 the `tools\pull` folder beside the app — never anything you said — after you say
@@ -668,9 +670,9 @@ microphone stays in memory and is dropped after each command.
 - `src/Platform/` — voice commands and call matching, search and play
   (`SearchVoiceCommand`, `MediaSearch`), the right-button hook,
   the Bluetooth dialer, single instance, startup and shutdown.
+- `src/config/` — the app manifest (DPI awareness, Windows versions).
 - `scripts/` — install, uninstall, recitation packing, the offline check and
   the firewall rules.
-- `src/config/` — the app manifest (DPI awareness, Windows versions).
 - `tools/questions-and-answers/Get-CalendarTopics.ps1` (and `.cmd`) —
   downloads published Islamic dates and public holidays into a file to import
   in Questions and answers (the one part that goes online, run by hand or by
